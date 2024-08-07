@@ -1,4 +1,4 @@
-# Proyecto SensorFusion
+# Proyecto stm32H7-node
 
 Este repositorio contiene el código y los scripts necesarios para la creación del nodo del sensor de Cámara del un sistema de ayuda a la conducción autónoma mediante la fusión de sensores (camara OV2460 y LIDAR Garmin Lite v3) utilizando la plataforma NUCLEO-H723ZG con Stm32CubeIDE.
 
