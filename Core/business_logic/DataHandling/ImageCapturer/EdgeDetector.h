@@ -19,6 +19,7 @@ public:
     EdgeDetector(const std::shared_ptr<SobelEdgeDetectorAlgorithm> &detectionEdgeAlgo = std::make_shared<SobelEdgeDetectorAlgorithm>());
     ~EdgeDetector() = default;
     void processImage(const std::array<std::array<uint8_t, imgWidth>, imgHeight>& rawImage, std::array<std::array<uint8_t, imgWidth>, imgHeight>& edges);
+    void detectEdges(const uint8_t* image, size_t size);
 };
 }
 }

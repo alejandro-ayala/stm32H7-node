@@ -28,6 +28,11 @@ void SystemTasks::captureImage(void* argument)
 	  imageCapturer->captureImage();
 	  m_dataHandlingTaskHandler->delayUntil(periodTimeCaptureImage);
 	  imageCapturer->extractImage();
+
+      const uint8_t* rawImgBuffer = imageCapturer->getRawImageBuffer();
+      size_t bufferSize = imageCapturer->getRawImageBufferSize();
+
+      imageCapturer->processEdges(rawImgBuffer, bufferSize);
 	}
 	/* USER CODE END 5 */
 }

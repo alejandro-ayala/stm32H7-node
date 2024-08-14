@@ -4,6 +4,7 @@
 #include "external/stb/stb_image.h"
 #include "jpeg.h"
 
+#define FLOAT_ENABLE
 
 namespace business_logic
 {
@@ -96,6 +97,7 @@ void ImageCapturer::decodeJPEG(uint8_t *image_buffer, uint16_t buffer_length,uin
 {
 
 	uint8_t pixel_number = 0;
+	m_picSize = 0;
 	unsigned long pixel_location = 0;
 	struct jpeg_decompress_struct cinfo;
 	struct jpeg_error_mgr jerr;
@@ -149,7 +151,7 @@ void ImageCapturer::decodeJPEG(uint8_t *image_buffer, uint16_t buffer_length,uin
 				if (pixel_number == 3) {
 					value_blue = row_pointer[0][i];
 	#ifdef FLOAT_ENABLE
-					image_RGB[pixel_location++] = (value_red * 0.299
+					m_pic[pixel_location++] = (value_red * 0.299
 							+ value_green * 0.587 + value_blue * 0.114);
 	#else
 					m_pic[pixel_location++] = static_cast<uint8_t>(value_red/3+value_green/3+value_blue/3);
@@ -165,6 +167,7 @@ void ImageCapturer::decodeJPEG(uint8_t *image_buffer, uint16_t buffer_length,uin
 		}
 
 	}
+	m_picSize = pixel_location;
 	jpeg_finish_decompress(&cinfo);
 	jpeg_destroy_decompress(&cinfo);
 	free(row_pointer[0]);
@@ -203,5 +206,19 @@ void ImageCapturer::encodeJPEG(uint8_t **image_buffer, unsigned long *image_size
 		free(m_pic);
 }
 
+const uint8_t* ImageCapturer::getRawImageBuffer() const
+{
+    return m_pic;
+}
+
+size_t ImageCapturer::getRawImageBufferSize() const
+{
+    return m_picSize;
+}
+
+void ImageCapturer::processEdges(const  uint8_t* image, size_t size)
+{
+	m_edgeDetector->detectEdges(image, size);
+}
 }
 }

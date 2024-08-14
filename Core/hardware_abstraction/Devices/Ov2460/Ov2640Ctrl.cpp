@@ -135,7 +135,7 @@ uint32_t Ov2640Ctrl::processCapture()
 {
 	uint32_t bufferPointer = 0;
 	bool headerFound;
-
+	m_frameBufferSize = 0;
 	while (1)
 	{
 		if (!headerFound && m_frameBuffer[bufferPointer] == 0xFF
