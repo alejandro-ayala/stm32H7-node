@@ -58,7 +58,7 @@ short Ov2640Ctrl::SCCB_Read(uint8_t reg_addr, uint8_t *pdata) {
 	return opertionStatus;
 }
 
-Ov2640Ctrl::Ov2640Ctrl(CameraCfg cfg) : m_hdcmi(cfg.hdcmi), m_hdma_dcmi(cfg.hdma_dcmi), m_hi2c2(cfg.hi2c2)
+Ov2640Ctrl::Ov2640Ctrl(CameraConfiguration cfg) : m_hdcmi(cfg.hdcmi), m_hdma_dcmi(cfg.hdma_dcmi), m_hi2c2(cfg.hi2c2), m_imageResolution(cfg.cameraResolution)
 {
 	m_isCapturingFrame = false;
 
@@ -178,6 +178,11 @@ const uint8_t* Ov2640Ctrl::getImageBuffer() const
 size_t Ov2640Ctrl::getImageBufferSize() const
 {
     return m_frameBufferSize;
+}
+
+CameraResolution Ov2640Ctrl::getImageResolution() const
+{
+    return m_imageResolution;
 }
 
 void Ov2640Ctrl::decodeCapture()

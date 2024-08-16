@@ -98,8 +98,7 @@ static void createApplicationLayerComponents();
 void createHardwareAbstractionLayerComponents()
 {
 	cancontroller    = std::make_shared<CanController>();
-	CameraCfg cameraCfg{hdcmi, hdma_dcmi, hi2c1};
-	cameraController = std::make_shared<Ov2640Ctrl>(cameraCfg);
+	cameraController = std::make_shared<Ov2640Ctrl>(CameraConfiguration{hdcmi, hdma_dcmi, hi2c1, CameraResolution::RES_320X240});
 }
 
 void createBusinessLogicLayerComponents()

@@ -10,7 +10,9 @@ enum BusinessLogicErrorId
     TaskCreationError = ErrorIdOffset::BusinessLogicLayer,
 	DynamicCastError,
 	QueueIsFull,
-	CameraTimeout
+	CameraTimeout,
+	MemoryAllocationFailed,
+	InvalidArgument
 };
 
 class BusinessLogicException : public BaseException
