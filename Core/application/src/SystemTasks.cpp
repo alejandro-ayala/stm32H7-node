@@ -21,6 +21,8 @@ void SystemTasks::captureImage(void* argument)
 
 	const auto periodTimeCaptureImage = 2000;
 	imageCapturer->initialize();
+	const auto imgBufferSize = imageCapturer->getBufferSize();
+	auto edges   = new uint8_t[imgBufferSize];
 	/* USER CODE BEGIN 5 */
 	/* Infinite loop */
 	for(;;)
@@ -32,8 +34,11 @@ void SystemTasks::captureImage(void* argument)
       const uint8_t* rawImgBuffer = imageCapturer->getRawImageBuffer();
       size_t bufferSize = imageCapturer->getRawImageBufferSize();
 
-      imageCapturer->processEdges(rawImgBuffer, bufferSize);
+
+      imageCapturer->processEdges(rawImgBuffer, edges, bufferSize);
 	}
+
+	delete[] edges;
 	/* USER CODE END 5 */
 }
 

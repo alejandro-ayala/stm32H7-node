@@ -25,13 +25,15 @@ private:
 	DMA_HandleTypeDef m_hdma_dcmi;
 	I2C_HandleTypeDef m_hi2c2;
 
+	CameraResolution m_imageResolution;
+
 	void setRegistersConfiguration(const std::vector<std::pair<uint8_t, uint8_t>>& registerCfg);
 	uint32_t processCapture();
 
 	short SCCB_Read(uint8_t reg_addr, uint8_t *pdata);
 	short SCCB_Write(uint8_t reg_addr, uint8_t data);
 public:
-	Ov2640Ctrl(CameraCfg cfg);
+	Ov2640Ctrl(CameraConfiguration cfg);
 	virtual ~Ov2640Ctrl() = default;
 
     void initialization() final;
@@ -40,6 +42,7 @@ public:
 
 	size_t getImageBufferSize() const final;
 	const uint8_t* getImageBuffer() const final;
+	CameraResolution getImageResolution() const final;
 
 	void startContinuousCapture() final;
 	void stopCapture() final;
