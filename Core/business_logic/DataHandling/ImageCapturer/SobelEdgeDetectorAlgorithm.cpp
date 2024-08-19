@@ -27,7 +27,10 @@ void SobelEdgeDetectorAlgorithm::sobelGradient(const  uint8_t* image, uint8_t*  
             int gy = applyKernel(sobel_y, region);
 
             // Calcular la magnitud del gradiente
-            edges[i * m_imgWidth + j] = sqrt(pow(gx, 2) + pow(gy, 2));
+			const auto pixelValue = sqrt(pow(gx, 2) + pow(gy, 2));
+			//Binarizacion de imagen
+			//edges[i * m_imgWidth + j] = pixelValue;//pixelBinarization(pixelValue);
+			edges[i * m_imgWidth + j] = pixelBinarization(pixelValue);
         }
     }
 }
@@ -52,6 +55,22 @@ void SobelEdgeDetectorAlgorithm::process(const uint8_t* rawImage, uint8_t* edges
 {
     std::cout << "SobelEdgeDetectorAlgorithm executed for image of size:" << std::to_string(size) << std::endl;
     sobelGradient(rawImage, edges);
+}
+
+uint8_t SobelEdgeDetectorAlgorithm::pixelBinarization(uint8_t originalValue) const
+{
+	static uint8_t threshold = 55;
+	static uint8_t whitePixel = 255;
+	static uint8_t blackPixel = 0;
+
+	if(originalValue >= threshold)
+	{
+		return whitePixel;
+	}
+	else
+	{
+		return blackPixel;
+	}
 }
 }
 }

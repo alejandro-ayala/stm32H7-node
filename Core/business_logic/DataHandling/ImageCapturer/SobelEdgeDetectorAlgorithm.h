@@ -26,7 +26,7 @@ class SobelEdgeDetectorAlgorithm : public IEdgeDetectorAlgorithm
 private:
 	void sobelGradient(const  uint8_t* image, uint8_t*  edges);
 	int applyKernel(const std::array<std::array<int, 3>, 3> &kernel, const std::array<std::array<int, 3>, 3> &region);
-
+	uint8_t pixelBinarization(uint8_t originalValue) const;
 	uint32_t m_imgHeight;
 	uint32_t m_imgWidth;
 public:
