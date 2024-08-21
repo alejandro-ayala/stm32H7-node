@@ -36,6 +36,14 @@ void SystemTasks::captureImage(void* argument)
 
 
       imageCapturer->processEdges(rawImgBuffer, edges, bufferSize);
+
+//      const auto encodedImg = imageCapturer->encodeEdgesImage(const_cast<uint8_t*>(edges), bufferSize);
+//      const auto encodedImgSize = encodedImg.size();
+//      for(const auto& element : encodedImg)
+//      {
+//    	  std::cout << "element: " << element << std::endl;
+//
+//      }
 	}
 
 	delete[] edges;

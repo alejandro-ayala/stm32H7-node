@@ -1,3 +1,4 @@
+#include "RLEEncoder.h"
 #include "ImageCapturer.h"
 #include "services/Exception/SystemExceptions.h"
 #define STB_IMAGE_IMPLEMENTATION
@@ -23,6 +24,8 @@ ImageCapturer::ImageCapturer(const std::shared_ptr<hardware_abstraction::Devices
 
 	m_edgeDetector = std::make_shared<EdgeDetector>(std::make_shared<SobelEdgeDetectorAlgorithm>(m_imageConfig));
 	//BUSINESS_LOGIC_ASSERT( m_capturesQueue->getAvailableSpace() != 0, services::BusinessLogicErrorId::QueueIsFull, "Queue to store the camera images is full");
+	m_imageEncoder = std::make_shared<RLEEncoder>();
+
 }
 
 ImageCapturer::~ImageCapturer()
@@ -47,9 +50,11 @@ void ImageCapturer::extractImage()
 {
 	if(/*!m_cameraControl->isCapturingFrame()*/true)
 	{
-        const uint8_t* bufferAddr = m_cameraControl->getImageBuffer();
-        const size_t bufferSize = m_cameraControl->getImageBufferSize();
-		decodeJPEG(const_cast<uint8_t*>(bufferAddr), bufferSize, 1);
+        const uint8_t* jpegImage = m_cameraControl->getImageBuffer();
+        const size_t jpegImgSize = m_cameraControl->getImageBufferSize();
+        const uint8_t greyscale = 1;
+		//decodeJPEG(const_cast<uint8_t*>(bufferAddr), bufferSize, 1);
+		m_imageCompressor->decompress(const_cast<uint8_t*>(jpegImage), jpegImgSize, m_pic, m_picSize, greyscale, m_imageState);
 	}
 	else
 	{
@@ -61,127 +66,6 @@ void ImageCapturer::extractImage()
 void ImageCapturer::stop()
 {
 	m_cameraControl->stopCapture();
-}
-
-void ImageCapturer::setupDecodeJPEG(uint8_t *image_buffer, uint16_t buffer_length,uint8_t greyscale, struct jpeg_decompress_struct& cinfo, struct jpeg_error_mgr& jerr)
-{
-	m_picSize = 0;
-	cinfo.err = jpeg_std_error(&jerr);
-
-
-	jpeg_create_decompress(&cinfo);
-	jpeg_mem_src(&cinfo, image_buffer, buffer_length);
-	jpeg_read_header(&cinfo, TRUE);
-	jpeg_start_decompress(&cinfo);
-
-	m_imageState.image_width = cinfo.output_width;
-	m_imageState.image_heigh = cinfo.output_height;
-
-	if (greyscale == 1)
-	{
-		m_imageState.image_byte_per_pixel = 1;
-		m_imageState.grayscale=1;
-	}
-	else
-	{
-		m_imageState.image_byte_per_pixel = cinfo.num_components;
-		m_imageState.grayscale=0;
-	}
-
-}
-
-void ImageCapturer::decodeJPEG(uint8_t *image_buffer, uint16_t buffer_length,uint8_t greyscale)
-{
-	struct jpeg_error_mgr jerr;
-	struct jpeg_decompress_struct cinfo;
-	setupDecodeJPEG(image_buffer, buffer_length, greyscale, cinfo, jerr);
-
-	JSAMPROW row_pointer[1];
-	row_pointer[0] = (unsigned char*) malloc(cinfo.output_width * cinfo.num_components);
-
-#ifdef FLOAT_ENABLE
-	float value_red, value_green, value_blue;
-#else
-		uint8_t value_red, value_green, value_blue;
-#endif
-
-	uint8_t pixel_number = 0;
-	unsigned long pixel_location = 0;
-	while (cinfo.output_scanline < cinfo.image_height)
-	{
-		jpeg_read_scanlines(&cinfo, row_pointer, 1);
-		for (short i = 0; i < cinfo.image_width * cinfo.num_components; i++)
-		{
-			if(greyscale==1)
-			{
-				pixel_number++;
-				if (pixel_number == 1) {
-					value_red = row_pointer[0][i];
-				}
-				if (pixel_number == 2) {
-					value_green = row_pointer[0][i];
-				}
-				if (pixel_number == 3) {
-					value_blue = row_pointer[0][i];
-	#ifdef FLOAT_ENABLE
-					m_pic[pixel_location++] = (value_red * 0.299
-							+ value_green * 0.587 + value_blue * 0.114);
-	#else
-					m_pic[pixel_location++] = static_cast<uint8_t>(value_red/3+value_green/3+value_blue/3);
-	#endif
-					pixel_number = 0;
-				}
-			}
-			else
-			{
-				m_pic[pixel_location++] = static_cast<uint8_t>(row_pointer[0][i]);
-			}
-		}
-	}
-	m_picSize = pixel_location;
-	jpeg_finish_decompress(&cinfo);
-	jpeg_destroy_decompress(&cinfo);
-	free(row_pointer[0]);
-}
-
-void ImageCapturer::setupEncodeJPEG(uint8_t **image_buffer, unsigned long *image_size, uint8_t image_quality, struct jpeg_compress_struct& cinfo, struct jpeg_error_mgr& jerr)
-{
-	cinfo.err = jpeg_std_error( &jerr );
-	jpeg_create_compress(&cinfo);
-	cinfo.image_width = m_imageState.image_width;
-	cinfo.image_height = m_imageState.image_heigh;
-	cinfo.input_components = m_imageState.image_byte_per_pixel;
-	if(m_imageState.grayscale==1)
-	{
-		cinfo.in_color_space = JCS_GRAYSCALE;
-	}
-	else
-	{
-		cinfo.in_color_space = JCS_RGB;
-	}
-	jpeg_set_defaults( &cinfo );
-	jpeg_set_quality(&cinfo, image_quality, TRUE );
-	jpeg_mem_dest(&cinfo, image_buffer, image_size);
-	jpeg_start_compress( &cinfo, TRUE );
-}
-
-void ImageCapturer::encodeJPEG(uint8_t **image_buffer, unsigned long *image_size, uint8_t image_quality)
-{
-	struct jpeg_compress_struct cinfo;
-	struct jpeg_error_mgr jerr;
-	JSAMPROW row_pointer[1];
-
-	setupEncodeJPEG(image_buffer, image_size, image_quality, cinfo, jerr);
-
-	while (cinfo.next_scanline < cinfo.image_height)
-	{
-		row_pointer[0] = &m_pic[cinfo.next_scanline * cinfo.image_width];
-		jpeg_write_scanlines(&cinfo, row_pointer, 1);
-	}
-
-	jpeg_finish_compress( &cinfo );
-	jpeg_destroy_compress( &cinfo );
-	free(m_pic);
 }
 
 const uint8_t* ImageCapturer::getRawImageBuffer() const
@@ -197,16 +81,43 @@ size_t ImageCapturer::getRawImageBufferSize() const
 void ImageCapturer::processEdges(const  uint8_t* image, uint8_t* edges, size_t size)
 {
 	m_edgeDetector->processImage(image, edges, size);
+
+#ifdef RLE_ENCODER
+	std::vector<RLEFrame> encodedImg;
+	this->encodeEdgesImage(const_cast<uint8_t*>(edges), 76800, encodedImg);
+
+	size_t encodedImgSize = encodedImg.size() * sizeof(RLEFrame);
+
+	std::memset(edges, 0, size);
+    //std::memcpy(edges, reinterpret_cast<const uint8_t*>(encodedImg.data()), encodedImgSize);
+
+	uint32_t j = 0;
+	for(const auto& element : encodedImg)
+	{
+		for(uint32_t i = 0; i< element.pixelRepetition; i++)
+		{
+			edges[j] = element.pixelValue;
+			j++;
+		}
+	}
+#else
 	memcpy(m_pic, edges, size);
 	std::memset(edges, 0, size);
 
 	unsigned long compressedSize = 0;
-	encodeJPEG(&edges, &compressedSize, m_imageConfig.imageQuality);
+	m_imageCompressor->compress(m_pic, &edges, &compressedSize, m_imageConfig.imageQuality, m_imageState);
+	std::cout << " Compressed edges image with" << std::endl;
+#endif
 }
 
 uint32_t ImageCapturer::getBufferSize() const
 {
 	return m_imageConfig;
+}
+
+void ImageCapturer::encodeEdgesImage(uint8_t* initialImage, const uint32_t initialImageSize , std::vector<RLEFrame>& encoded) const
+{
+	m_imageEncoder->encode(initialImage, initialImageSize, encoded);
 }
 }
 }
