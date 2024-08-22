@@ -3,6 +3,7 @@
 #include "business_logic/Communication/CommunicationManager.h"
 #include "business_logic/ClockSyncronization/SharedClockSlaveManager.h"
 #include "business_logic/DataHandling/ImageCapturer/ImageCapturer.h"
+#include "business_logic/DataSerializer/IDataSerializer.h"
 #include "main.h"
 #include "cmsis_os.h"
 #include <memory>
@@ -14,9 +15,11 @@ class SystemTasks
 {
 private:
 
+
 	static inline std::shared_ptr<business_logic::Osal::TaskHandler> m_clockSyncTaskHandler;
 	static inline std::shared_ptr<business_logic::Osal::TaskHandler> m_dataHandlingTaskHandler;
 	static inline std::shared_ptr<business_logic::Osal::TaskHandler> m_commTaskHandler;
+	static inline std::shared_ptr<business_logic::DataSerializer::IDataSerializer> m_dataSerializer;
 
 public:
 	SystemTasks(const std::shared_ptr<business_logic::Communication::CommunicationManager>& commMng, const std::shared_ptr<business_logic::DataHandling::ImageCapturer>& imageCapturer, const std::shared_ptr<business_logic::ClockSyncronization::SharedClockSlaveManager>& sharedClkMng);
