@@ -4,6 +4,7 @@
 #include "../Middlewares/Third_Party/LibJPEG/include/jpeglib.h"
 #include "EdgeDetector.h"
 #include "JpegCompressor.h"
+#include "../DataSerializer/IDataSerializer.h"
 #include "IEncoder.h"
 #include "ImageState.h"
 #include <memory>
@@ -20,6 +21,7 @@ private:
 	std::shared_ptr<EdgeDetector> m_edgeDetector;
 	std::shared_ptr<JpegCompressor> m_imageCompressor;
 	std::shared_ptr<IEncoder> m_imageEncoder;
+	std::shared_ptr<IDataSerializer> m_dataSerializer;
 
 	uint8_t* m_pic;
 	ImageState m_imageState;
