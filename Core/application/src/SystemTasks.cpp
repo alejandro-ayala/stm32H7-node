@@ -1,4 +1,7 @@
 #include "../include/SystemTasks.h"
+
+#include "business_logic/DataSerializer/DataSerializer.h"
+#include "business_logic/DataSerializer/ImageSnapshot.h"
 #include <iostream>
 
 namespace application
@@ -6,6 +9,7 @@ namespace application
 SystemTasks::SystemTasks(const std::shared_ptr<business_logic::Communication::CommunicationManager>& commMng, const std::shared_ptr<business_logic::DataHandling::ImageCapturer>& imageCapturer, const std::shared_ptr<business_logic::ClockSyncronization::SharedClockSlaveManager>& sharedClkMng)
 {
 	createPoolTasks(commMng, imageCapturer, sharedClkMng);
+	m_dataSerializer = std::make_shared<business_logic::DataSerializer::DataSerializer>();
 }
 
 void SystemTasks::createPoolTasks(const std::shared_ptr<business_logic::Communication::CommunicationManager>& commMng, const std::shared_ptr<business_logic::DataHandling::ImageCapturer>& imageCapturer, const std::shared_ptr<business_logic::ClockSyncronization::SharedClockSlaveManager>& sharedClkMng)
@@ -35,7 +39,15 @@ void SystemTasks::captureImage(void* argument)
       size_t bufferSize = imageCapturer->getRawImageBufferSize();
 
 
-      imageCapturer->processEdges(rawImgBuffer, edges, bufferSize);
+      const auto imgSize = imageCapturer->processEdges(rawImgBuffer, edges, bufferSize);
+
+      //Serializar mensaje antes de enviar por CAN
+      business_logic::DataSerializer::ImageSnapshot msg;
+      msg.m_msgId = 0x0F;
+      msg.m_timestamp = 0x1232153;
+      msg.m_imgSize = imgSize;
+      msg.m_imgBuffer = edges;
+      const auto serializeMsg = m_dataSerializer->serialize(msg);
 
 //      const auto encodedImg = imageCapturer->encodeEdgesImage(const_cast<uint8_t*>(edges), bufferSize);
 //      const auto encodedImgSize = encodedImg.size();

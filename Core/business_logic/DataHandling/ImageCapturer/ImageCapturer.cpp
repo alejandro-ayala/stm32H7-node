@@ -1,5 +1,6 @@
 #include "RLEEncoder.h"
-#include "../DataSerializer/DataSerializer.h"
+
+#include "../../DataSerializer/DataSerializer.h"
 #include "ImageCapturer.h"
 #include "services/Exception/SystemExceptions.h"
 #define STB_IMAGE_IMPLEMENTATION
@@ -26,8 +27,6 @@ ImageCapturer::ImageCapturer(const std::shared_ptr<hardware_abstraction::Devices
 	m_edgeDetector = std::make_shared<EdgeDetector>(std::make_shared<SobelEdgeDetectorAlgorithm>(m_imageConfig));
 	//BUSINESS_LOGIC_ASSERT( m_capturesQueue->getAvailableSpace() != 0, services::BusinessLogicErrorId::QueueIsFull, "Queue to store the camera images is full");
 	m_imageEncoder   = std::make_shared<RLEEncoder>();
-	m_dataSerializer = std::make_shared<DataSerializer>();
-
 }
 
 ImageCapturer::~ImageCapturer()
@@ -80,7 +79,7 @@ size_t ImageCapturer::getRawImageBufferSize() const
     return m_picSize;
 }
 
-void ImageCapturer::processEdges(const  uint8_t* image, uint8_t* edges, size_t size)
+unsigned long ImageCapturer::processEdges(const  uint8_t* image, uint8_t* edges, size_t size)
 {
 	m_edgeDetector->processImage(image, edges, size);
 
@@ -109,6 +108,7 @@ void ImageCapturer::processEdges(const  uint8_t* image, uint8_t* edges, size_t s
 	unsigned long compressedSize = 0;
 	m_imageCompressor->compress(m_pic, &edges, &compressedSize, m_imageConfig.imageQuality, m_imageState);
 	std::cout << " Compressed edges image with" << std::endl;
+	return compressedSize;
 #endif
 }
 
