@@ -49,6 +49,17 @@ void SystemTasks::captureImage(void* argument)
       msg.m_imgBuffer = edges;
       const auto serializeMsg = m_dataSerializer->serialize(msg);
 
+      business_logic::DataSerializer::ImageSnapshot rxMsg;
+      m_dataSerializer->deserialize(rxMsg, serializeMsg);
+      if(msg == rxMsg)
+      {
+    	  std::cout << "Equal msgs" << std::endl;
+      }
+      else
+      {
+    	  std::cout << "Different msgs" << std::endl;
+      }
+
 //      const auto encodedImg = imageCapturer->encodeEdgesImage(const_cast<uint8_t*>(edges), bufferSize);
 //      const auto encodedImgSize = encodedImg.size();
 //      for(const auto& element : encodedImg)
