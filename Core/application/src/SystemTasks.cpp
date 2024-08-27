@@ -24,11 +24,19 @@ void SystemTasks::captureImage(void* argument)
 	auto imageCapturer = std::make_shared<business_logic::DataHandling::ImageCapturer>(*static_cast<business_logic::DataHandling::ImageCapturer*>(argument));
 
 	const auto periodTimeCaptureImage = 2000;
+	const auto delayCameraStartup     = 1000;
+
+    size_t freeHeapSize = xPortGetFreeHeapSize();
+    size_t minEverFreeHeapSize = xPortGetMinimumEverFreeHeapSize();
+
 	imageCapturer->initialize();
+	m_dataHandlingTaskHandler->delayUntil(delayCameraStartup);
 	const auto imgBufferSize = imageCapturer->getBufferSize();
 	auto edges   = new uint8_t[imgBufferSize];
 	/* USER CODE BEGIN 5 */
 	/* Infinite loop */
+    freeHeapSize = xPortGetFreeHeapSize();
+    minEverFreeHeapSize = xPortGetMinimumEverFreeHeapSize();
 	for(;;)
 	{
 	  imageCapturer->captureImage();
@@ -38,28 +46,42 @@ void SystemTasks::captureImage(void* argument)
       const uint8_t* rawImgBuffer = imageCapturer->getRawImageBuffer();
       size_t bufferSize = imageCapturer->getRawImageBufferSize();
 
+      freeHeapSize = xPortGetFreeHeapSize();
+      minEverFreeHeapSize = xPortGetMinimumEverFreeHeapSize();
 
       const auto imgSize = imageCapturer->processEdges(rawImgBuffer, edges, bufferSize);
 
+      freeHeapSize = xPortGetFreeHeapSize();
+      minEverFreeHeapSize = xPortGetMinimumEverFreeHeapSize();
+
       //Serializar mensaje antes de enviar por CAN
-      business_logic::DataSerializer::ImageSnapshot msg;
-      msg.m_msgId = 0x0F;
-      msg.m_timestamp = 0x1232153;
-      msg.m_imgSize = imgSize;
-      msg.m_imgBuffer = edges;
-      const auto serializeMsg = m_dataSerializer->serialize(msg);
-
-      business_logic::DataSerializer::ImageSnapshot rxMsg;
-      m_dataSerializer->deserialize(rxMsg, serializeMsg);
-      if(msg == rxMsg)
+      for(size_t i = 0; i < (imgSize / MAXIMUN_CBOR_BUFFER_SIZE); i++)
       {
-    	  std::cout << "Equal msgs" << std::endl;
-      }
-      else
-      {
-    	  std::cout << "Different msgs" << std::endl;
+    	  std::vector<uint8_t> serializeMsg;
+    	  business_logic::DataSerializer::ImageSnapshot msg{0xF, i, edges, imgSize, 0xFE34};
+          m_dataSerializer->serialize(msg, serializeMsg);
+          const auto ptrSerializedMsg = serializeMsg.data();
+          const auto serializedMsgSize = serializeMsg.size();
+
+          //Deserializacion test
+          business_logic::DataSerializer::ImageSnapshot rxMsg;
+          m_dataSerializer->deserialize(rxMsg, serializeMsg);
+          const auto ptrDeSerializedMsg = serializeMsg.data();
+          const auto deserializedMsgSize = serializeMsg.size();
+          if(rxMsg == msg)
+          {
+        	  std::cout << "Equal" << std::endl;
+          }
+          else
+          {
+        	  std::cout << "Not Equal" << std::endl;
+          }
+
       }
 
+
+      freeHeapSize = xPortGetFreeHeapSize();
+      minEverFreeHeapSize = xPortGetMinimumEverFreeHeapSize();
 //      const auto encodedImg = imageCapturer->encodeEdgesImage(const_cast<uint8_t*>(edges), bufferSize);
 //      const auto encodedImgSize = encodedImg.size();
 //      for(const auto& element : encodedImg)

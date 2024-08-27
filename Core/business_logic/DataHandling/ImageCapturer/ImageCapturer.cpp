@@ -84,7 +84,6 @@ unsigned long ImageCapturer::processEdges(const  uint8_t* image, uint8_t* edges,
 	m_edgeDetector->processImage(image, edges, size);
 
 #ifdef RLE_ENCODER
-	std::vector<RLEFrame> encodedImg;
 	this->encodeEdgesImage(const_cast<uint8_t*>(edges), 76800, encodedImg);
 
 	size_t encodedImgSize = encodedImg.size() * sizeof(RLEFrame);

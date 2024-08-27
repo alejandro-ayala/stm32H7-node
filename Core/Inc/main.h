@@ -41,7 +41,7 @@ extern "C" {
 
 /* Exported constants --------------------------------------------------------*/
 /* USER CODE BEGIN EC */
-
+#define MAXIMUN_CBOR_BUFFER_SIZE 128
 /* USER CODE END EC */
 
 /* Exported macro ------------------------------------------------------------*/

@@ -9,7 +9,7 @@ class IDataSerializer
 {
 public:
 	virtual void deserialize(ISerializableMessage& msg, const std::vector<uint8_t>& data) = 0;
-	virtual std::vector<uint8_t> serialize(const ISerializableMessage& msg) const = 0;
+	virtual void serialize(const ISerializableMessage& msg, std::vector<uint8_t>& msgSerialized) const = 0;
 
 };
 }
