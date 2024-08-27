@@ -1,6 +1,6 @@
 #pragma once
 
-#define SIMD
+//#define SIMD
 
 #ifdef SIMD
 #include <vector>

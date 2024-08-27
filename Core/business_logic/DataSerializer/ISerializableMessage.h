@@ -15,7 +15,7 @@ private:
 
 public:
     virtual ~ISerializableMessage() = default;
-    virtual std::vector<uint8_t> serialize() const = 0;
+    virtual void serialize(std::vector<uint8_t>& serializedMsg) const = 0;
     virtual void deserialize(const std::vector<uint8_t>& data) = 0;
 };
 }
