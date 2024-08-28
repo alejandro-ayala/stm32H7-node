@@ -2,7 +2,9 @@
 
 #include <vector>
 #include <utility>
+#include <memory>
 #include "../ICameraDevice.h"
+#include  "hardware_abstraction/Controllers/I2C/I2CController.h"
 namespace hardware_abstraction
 {
 namespace Devices
@@ -26,6 +28,7 @@ private:
 	I2C_HandleTypeDef m_hi2c2;
 
 	CameraResolution m_imageResolution;
+	std::shared_ptr<Controllers::I2CController> m_i2cControl;
 
 	void setRegistersConfiguration(const std::vector<std::pair<uint8_t, uint8_t>>& registerCfg);
 	uint32_t processCapture();

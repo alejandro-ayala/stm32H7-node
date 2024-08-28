@@ -19,46 +19,7 @@ void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi)
 	//cameraController->stopCapture();
 }
 
-short Ov2640Ctrl::SCCB_Write(uint8_t reg_addr, uint8_t data) {
-	short opertionStatus = 0;
-	uint8_t buffer[2] = { 0 };
-	HAL_StatusTypeDef connectionStatus;
-	buffer[0] = reg_addr;
-	buffer[1] = data;
-	__disable_irq();
-	connectionStatus = HAL_I2C_Master_Transmit(&m_hi2c2, (uint16_t) 0x60, buffer,
-			2, 100);
-	if (connectionStatus == HAL_OK) {
-		opertionStatus = 1;
-	} else {
-		opertionStatus = 0;
-	}
-	__enable_irq();
-	return opertionStatus;
-}
-
-short Ov2640Ctrl::SCCB_Read(uint8_t reg_addr, uint8_t *pdata) {
-	short opertionStatus = 0;
-	HAL_StatusTypeDef connectionStatus;
-	__disable_irq();
-	connectionStatus = HAL_I2C_Master_Transmit(&m_hi2c2, (uint16_t) 0x60,
-			&reg_addr, 1, 100);
-	if (connectionStatus == HAL_OK) {
-		connectionStatus = HAL_I2C_Master_Receive(&m_hi2c2, (uint16_t) 0x61, pdata,
-				1, 100);
-		if (connectionStatus == HAL_OK) {
-			opertionStatus = 0;
-		} else {
-			opertionStatus = 1;
-		}
-	} else {
-		opertionStatus = 2;
-	}
-	__enable_irq();
-	return opertionStatus;
-}
-
-Ov2640Ctrl::Ov2640Ctrl(CameraConfiguration cfg) : m_hdcmi(cfg.hdcmi), m_hdma_dcmi(cfg.hdma_dcmi), m_hi2c2(cfg.hi2c2), m_imageResolution(cfg.cameraResolution)
+Ov2640Ctrl::Ov2640Ctrl(CameraConfiguration cfg) : m_hdcmi(cfg.hdcmi), m_hdma_dcmi(cfg.hdma_dcmi), m_i2cControl(cfg.hi2c2), m_imageResolution(cfg.cameraResolution)
 {
 	m_isCapturingFrame = false;
 
@@ -66,21 +27,21 @@ Ov2640Ctrl::Ov2640Ctrl(CameraConfiguration cfg) : m_hdcmi(cfg.hdcmi), m_hdma_dcm
 
 void Ov2640Ctrl::initialization()
 {
-
+	m_i2cControl->initialize();
 	HAL_GPIO_WritePin(CAMERA_RESET_GPIO_Port, CAMERA_RESET_Pin, GPIO_PIN_RESET);
 	HAL_Delay(100);
 	HAL_GPIO_WritePin(CAMERA_RESET_GPIO_Port, CAMERA_RESET_Pin, GPIO_PIN_SET);
 	HAL_Delay(100);
 
 	//TODO add register map instead of magic values
-	SCCB_Write(0xff, 0x01);
-	SCCB_Write(0x12, 0x80);
+	m_i2cControl->send(0xff, 0x01);
+	m_i2cControl->send(0x12, 0x80);
 	HAL_Delay(1000);
 
 	uint8_t pid;
 	uint8_t ver;
-	SCCB_Read(0x0a, &pid);  // pid value is 0x26
-	SCCB_Read(0x0b, &ver);  // ver value is 0x42
+	m_i2cControl->receive(0x0a, &pid);  // pid value is 0x26
+	m_i2cControl->receive(0x0b, &ver);  // ver value is 0x42
 	std::cout << "Camera PID:" << pid << " version: " << ver << std::endl;
 
 	// Stop DCMI clear buffer
@@ -92,11 +53,11 @@ void Ov2640Ctrl::setRegistersConfiguration(const std::vector<std::pair<uint8_t, 
 {
 	for(const auto& [regAddr, regVal] : registerCfg)
 	{
-		SCCB_Write(regAddr, regVal);
+		m_i2cControl->send(regAddr, regVal);
 		std::cout << "SCCB write register: " << std::to_string(regAddr) << std::to_string(regVal) << std::endl;
 		HAL_Delay(10);
 		uint8_t newRegVal;
-		SCCB_Read(regAddr, &newRegVal);
+		m_i2cControl->receive(regAddr, &newRegVal);
 		if (regVal != newRegVal)
 		{
 			std::cout << "SCCB write failure: " << std::to_string(regAddr) << std::to_string(regVal) << std::endl;
@@ -110,9 +71,9 @@ void Ov2640Ctrl::configuration(CameraResolution resolution)
 	setRegistersConfiguration(OV2640_YUV422);
 	setRegistersConfiguration(OV2640_JPEG);
 	HAL_Delay(100);
-	SCCB_Write(0xff, 0x01);
+	m_i2cControl->send(0xff, 0x01);
 	HAL_Delay(100);
-	SCCB_Write(0x15, 0x00);
+	m_i2cControl->send(0x15, 0x00);
 
 	setRegistersConfiguration(OV2640_320x240_JPEG);
 }
@@ -213,8 +174,8 @@ bool Ov2640Ctrl::selfTest()
 {
 	uint8_t pid;
 	uint8_t version;
-	SCCB_Read(0x0a, &pid);  // pid value is 0x26
-	SCCB_Read(0x0b, &version);  // ver value is 0x42
+	m_i2cControl->receive(0x0a, &pid);  // pid value is 0x26
+	m_i2cControl->receive(0x0b, &version);  // ver value is 0x42
 	return (pid == m_pid && version == m_version);
 }
 }

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+#include "../Controllers/I2C/I2CController.h"
 namespace hardware_abstraction
 {
 namespace Devices
@@ -9,7 +11,7 @@ struct CameraConfiguration
 {
 	DCMI_HandleTypeDef hdcmi;
 	DMA_HandleTypeDef hdma_dcmi;
-	I2C_HandleTypeDef hi2c2;
+	std::shared_ptr<Controllers::I2CController> hi2c2;
 	CameraResolution cameraResolution;
 };
 
