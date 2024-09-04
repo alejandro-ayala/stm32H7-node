@@ -36,6 +36,8 @@ build/
 *.la
 *.a
 *.lib
+!arm_cortexM7lfdp_math.lib
+!libarm_cortexM7lfdp_math.a
 
 # Executables
 *.exe
