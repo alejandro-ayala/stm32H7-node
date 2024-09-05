@@ -20,6 +20,7 @@ private:
 	static inline std::shared_ptr<business_logic::Osal::TaskHandler> m_dataHandlingTaskHandler;
 	static inline std::shared_ptr<business_logic::Osal::TaskHandler> m_commTaskHandler;
 	static inline std::shared_ptr<business_logic::DataSerializer::IDataSerializer> m_dataSerializer;
+	static inline std::shared_ptr<business_logic::Osal::QueueHandler> m_capturesQueue;
 
 public:
 	SystemTasks(const std::shared_ptr<business_logic::Communication::CommunicationManager>& commMng, const std::shared_ptr<business_logic::DataHandling::ImageCapturer>& imageCapturer, const std::shared_ptr<business_logic::ClockSyncronization::SharedClockSlaveManager>& sharedClkMng);
@@ -28,6 +29,8 @@ public:
 	static void captureImage(void* argument);
 	static void sendData(void* argument);
     void createPoolTasks(const std::shared_ptr<business_logic::Communication::CommunicationManager>& commMng, const std::shared_ptr<business_logic::DataHandling::ImageCapturer>& imageCapturer, const std::shared_ptr<business_logic::ClockSyncronization::SharedClockSlaveManager>& sharedClkMng);
+    static void getNextImage(business_logic::DataSerializer::ImageSnapshot& edgesSnapshot);
+    static bool isPendingData();
 };
 
 }

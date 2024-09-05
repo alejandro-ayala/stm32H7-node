@@ -1,7 +1,8 @@
 #pragma once
 
+#include "business_logic/DataSerializer/ImageSnapshot.h"
+#include "business_logic/Osal/QueueHandler.h"
 #include "../../hardware_abstraction/Controllers/CAN/CanController.h"
-#include "IData.h"
 #include "../ClockSyncronization/TimeStamp.h"
 #include "../ClockSyncronization/TimeController.h"
 #include <memory>
@@ -20,7 +21,7 @@ public:
 	virtual ~CommunicationManager();
 
 	void initialization();
-	void sendData(IData msg);
+	void sendData(const std::vector<uint8_t>& msg);
 	void receiveData(void);
 	bool selfTest();
 

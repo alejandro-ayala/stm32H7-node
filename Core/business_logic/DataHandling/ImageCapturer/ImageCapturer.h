@@ -16,7 +16,6 @@ class ImageCapturer
 {
 private:
 	std::shared_ptr<hardware_abstraction::Devices::ICameraDevice> m_cameraControl;
-	std::shared_ptr<business_logic::Osal::QueueHandler> m_capturesQueue;
 	std::shared_ptr<EdgeDetector> m_edgeDetector;
 	std::shared_ptr<JpegCompressor> m_imageCompressor;
 	std::shared_ptr<IEncoder> m_imageEncoder;
@@ -27,7 +26,7 @@ private:
 	ImageConfiguration m_imageConfig;
 
 public:
-	explicit ImageCapturer(const std::shared_ptr<hardware_abstraction::Devices::ICameraDevice>& cameraControl, const std::shared_ptr<business_logic::Osal::QueueHandler> capturesQueue = nullptr);
+	explicit ImageCapturer(const std::shared_ptr<hardware_abstraction::Devices::ICameraDevice>& cameraControl);
 	virtual ~ImageCapturer();
 
     void initialize();
@@ -36,7 +35,7 @@ public:
 	void extractImage();
 	size_t getRawImageBufferSize() const;
 	const uint8_t* getRawImageBuffer() const;
-	unsigned long processEdges(const uint8_t* image, uint8_t* edges, size_t size);
+	unsigned long processEdges(const uint8_t* image, uint8_t*& edges, size_t size);
 	uint32_t getBufferSize() const;
 	void encodeEdgesImage(uint8_t* initialImage, const uint32_t initialImageSize, std::vector<RLEFrame>& encoded ) const;
 

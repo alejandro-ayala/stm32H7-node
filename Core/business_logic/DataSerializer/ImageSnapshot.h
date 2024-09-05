@@ -3,6 +3,7 @@
 #include "ISerializableMessage.h"
 #include <iostream>
 #include "main.h"
+#include <FreeRTOS.h>
 
 namespace business_logic
 {
@@ -34,20 +35,10 @@ public:
 private:
     friend void to_json(nlohmann::json& j, const ImageSnapshot& image)
     {
-//        std::vector<uint8_t> imgBufferVector(image.m_imgBuffer, image.m_imgBuffer + 4/*image.m_imgSize*/);
-//        auto size = imgBufferVector.size();
-//        auto freeHeapSize = xPortGetFreeHeapSize();
-//        auto minEverFreeHeapSize = xPortGetMinimumEverFreeHeapSize();
-//        j = nlohmann::json{{"msgId", image.m_msgId}, {"imgSize", image.m_imgSize},
-//                           {"imgBuffer", imgBufferVector}, {"timestamp", image.m_timestamp}};
-
-        std::cout << "m_imgSize: " << image.m_imgSize << std::endl;
-        std::cout << "m_imgBuffer: " << static_cast<void*>(image.m_imgBuffer) << std::endl;
-
-        // Verificación adicional
         if (image.m_imgSize > 0 && image.m_imgBuffer != nullptr)
         {
-            try {
+            try
+            {
                 std::vector<uint8_t> imgBufferVector(image.m_imgBuffer + MAXIMUN_CBOR_BUFFER_SIZE*image.m_msgIndex, (image.m_imgBuffer + MAXIMUN_CBOR_BUFFER_SIZE*image.m_msgIndex) + MAXIMUN_CBOR_BUFFER_SIZE);
                 j = nlohmann::json{{"msgId", image.m_msgId}, {"imgSize", image.m_imgSize},
                                    {"imgBuffer", imgBufferVector}, {"timestamp", image.m_timestamp}};

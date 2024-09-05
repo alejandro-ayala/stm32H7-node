@@ -29,6 +29,7 @@
 #include "business_logic/DataHandling/ImageCapturer/ImageCapturer.h"
 #include "business_logic/ClockSyncronization/SharedClockSlaveManager.h"
 #include "application/include/SystemTasks.h"
+#include "business_logic/DataSerializer/ImageSnapshot.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -104,9 +105,6 @@ void createHardwareAbstractionLayerComponents()
 
 void createBusinessLogicLayerComponents()
 {
-	uint32_t queueSize   = 512;
-	uint32_t queueLength = 512;
-	//auto capturesQueue = std::make_shared<business_logic::Osal::QueueHandler>(queueSize, queueLength);
 	timecontroller = std::make_shared<TimeController>();
 	commMng = std::make_shared<CommunicationManager>(timecontroller, cancontroller);
 	imageCapturer = std::make_shared<ImageCapturer>(cameraController);

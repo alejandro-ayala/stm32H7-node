@@ -1,13 +1,16 @@
 #include "../include/SystemTasks.h"
 
 #include "business_logic/DataSerializer/DataSerializer.h"
-#include "business_logic/DataSerializer/ImageSnapshot.h"
+
 #include <iostream>
 
 namespace application
 {
 SystemTasks::SystemTasks(const std::shared_ptr<business_logic::Communication::CommunicationManager>& commMng, const std::shared_ptr<business_logic::DataHandling::ImageCapturer>& imageCapturer, const std::shared_ptr<business_logic::ClockSyncronization::SharedClockSlaveManager>& sharedClkMng)
 {
+	uint32_t queueItemSize   = sizeof(business_logic::DataSerializer::ImageSnapshot);
+	uint32_t queueLength     = 10;
+	m_capturesQueue = std::make_shared<business_logic::Osal::QueueHandler>(queueLength, queueItemSize);
 	createPoolTasks(commMng, imageCapturer, sharedClkMng);
 	m_dataSerializer = std::make_shared<business_logic::DataSerializer::DataSerializer>();
 }
@@ -16,7 +19,8 @@ void SystemTasks::createPoolTasks(const std::shared_ptr<business_logic::Communic
 {
 	m_clockSyncTaskHandler    = std::make_shared<business_logic::Osal::TaskHandler>(SystemTasks::syncronizationGlobalClock, "syncronizationGlobalClockTask", DefaultPriorityTask, static_cast<business_logic::Osal::VoidPtr>(sharedClkMng.get()));
 	m_dataHandlingTaskHandler = std::make_shared<business_logic::Osal::TaskHandler>(SystemTasks::captureImage, "readSensorsTask", DefaultPriorityTask, static_cast<business_logic::Osal::VoidPtr>(imageCapturer.get()), 4096);
-	m_commTaskHandler         = std::make_shared<business_logic::Osal::TaskHandler>(SystemTasks::sendData, "sendDataTask", DefaultPriorityTask, static_cast<business_logic::Osal::VoidPtr>(commMng.get()));
+	m_commTaskHandler         = std::make_shared<business_logic::Osal::TaskHandler>(SystemTasks::sendData, "sendDataTask", DefaultPriorityTask, static_cast<business_logic::Osal::VoidPtr>(commMng.get()), 4096);
+
 }
 
 void SystemTasks::captureImage(void* argument)
@@ -32,66 +36,33 @@ void SystemTasks::captureImage(void* argument)
 	imageCapturer->initialize();
 	m_dataHandlingTaskHandler->delayUntil(delayCameraStartup);
 	const auto imgBufferSize = imageCapturer->getBufferSize();
-	auto edges   = new uint8_t[imgBufferSize];
+	auto edges   = std::make_shared<std::vector<uint8_t>>(imgBufferSize);
 	/* USER CODE BEGIN 5 */
 	/* Infinite loop */
     freeHeapSize = xPortGetFreeHeapSize();
     minEverFreeHeapSize = xPortGetMinimumEverFreeHeapSize();
 	for(;;)
 	{
-	  imageCapturer->captureImage();
-	  m_dataHandlingTaskHandler->delayUntil(periodTimeCaptureImage);
-	  imageCapturer->extractImage();
+		imageCapturer->captureImage();
+		m_dataHandlingTaskHandler->delayUntil(periodTimeCaptureImage);
+		imageCapturer->extractImage();
 
-      const uint8_t* rawImgBuffer = imageCapturer->getRawImageBuffer();
-      size_t bufferSize = imageCapturer->getRawImageBufferSize();
+		const uint8_t* rawImgBuffer = imageCapturer->getRawImageBuffer();
+		size_t bufferSize = imageCapturer->getRawImageBufferSize();
 
-      freeHeapSize = xPortGetFreeHeapSize();
-      minEverFreeHeapSize = xPortGetMinimumEverFreeHeapSize();
+		freeHeapSize = xPortGetFreeHeapSize();
+		minEverFreeHeapSize = xPortGetMinimumEverFreeHeapSize();
 
-      const auto imgSize = imageCapturer->processEdges(rawImgBuffer, edges, bufferSize);
+		auto edgesPtr = edges->data();
+		const auto edgeCompressedImgSize = imageCapturer->processEdges(rawImgBuffer, edgesPtr, bufferSize);
 
-      freeHeapSize = xPortGetFreeHeapSize();
-      minEverFreeHeapSize = xPortGetMinimumEverFreeHeapSize();
-
-      //Serializar mensaje antes de enviar por CAN
-      for(size_t i = 0; i < (imgSize / MAXIMUN_CBOR_BUFFER_SIZE); i++)
-      {
-    	  std::vector<uint8_t> serializeMsg;
-    	  business_logic::DataSerializer::ImageSnapshot msg{0xF, i, edges, imgSize, 0xFE34};
-          m_dataSerializer->serialize(msg, serializeMsg);
-          const auto ptrSerializedMsg = serializeMsg.data();
-          const auto serializedMsgSize = serializeMsg.size();
-
-          //Deserializacion test
-          business_logic::DataSerializer::ImageSnapshot rxMsg;
-          m_dataSerializer->deserialize(rxMsg, serializeMsg);
-          const auto ptrDeSerializedMsg = serializeMsg.data();
-          const auto deserializedMsgSize = serializeMsg.size();
-          if(rxMsg == msg)
-          {
-        	  std::cout << "Equal" << std::endl;
-          }
-          else
-          {
-        	  std::cout << "Not Equal" << std::endl;
-          }
-
-      }
-
-
-      freeHeapSize = xPortGetFreeHeapSize();
-      minEverFreeHeapSize = xPortGetMinimumEverFreeHeapSize();
-//      const auto encodedImg = imageCapturer->encodeEdgesImage(const_cast<uint8_t*>(edges), bufferSize);
-//      const auto encodedImgSize = encodedImg.size();
-//      for(const auto& element : encodedImg)
-//      {
-//    	  std::cout << "element: " << element << std::endl;
-//
-//      }
+		business_logic::DataSerializer::ImageSnapshot edgesSnapshot{0xE3, 0x00, edgesPtr, edgeCompressedImgSize, 0xFE34};
+		const auto isInserted = m_capturesQueue->sendToBack(( void * ) &edgesSnapshot);
+		if(!isInserted)
+		{
+			std::cout << "Failed to insert snapshot" << std::endl;
+		}
 	}
-
-	delete[] edges;
 	/* USER CODE END 5 */
 }
 
@@ -106,6 +77,21 @@ void SystemTasks::sendData(void* argument)
 	for(;;)
 	{
 		std::cout << "Sending image information to master node" << std::endl;
+		if(isPendingData())
+		{
+			business_logic::DataSerializer::ImageSnapshot nextSnapshot;
+			getNextImage(nextSnapshot);
+			for(size_t i = 0; i < (nextSnapshot.m_imgSize / MAXIMUN_CBOR_BUFFER_SIZE); i++)
+		    {
+				business_logic::DataSerializer::ImageSnapshot msg{nextSnapshot.m_msgId, i, nextSnapshot.m_imgBuffer + (i*MAXIMUN_CBOR_BUFFER_SIZE), MAXIMUN_CBOR_BUFFER_SIZE, nextSnapshot.m_timestamp};
+		    	std::vector<uint8_t> serializeMsg;
+		        m_dataSerializer->serialize(msg, serializeMsg);
+		        const auto ptrSerializedMsg = serializeMsg.data();
+		        const auto serializedMsgSize = serializeMsg.size();
+				commMng->sendData(serializeMsg);
+		    }
+		}
+
 		m_commTaskHandler->delayUntil(sendDataPeriod);
 	}
 	/* USER CODE END 5 */
@@ -125,5 +111,15 @@ void SystemTasks::syncronizationGlobalClock(void* argument)
 		m_clockSyncTaskHandler->delayUntil(syncClkPeriod);
 	}
 	/* USER CODE END 5 */
+}
+
+bool SystemTasks::isPendingData()
+{
+	return (m_capturesQueue->getStoredMsg() > 0);
+}
+
+void SystemTasks::getNextImage(business_logic::DataSerializer::ImageSnapshot& edgesSnapshot)
+{
+	m_capturesQueue->receive(&edgesSnapshot);
 }
 }

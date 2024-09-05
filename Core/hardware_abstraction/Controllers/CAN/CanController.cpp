@@ -61,7 +61,7 @@ void CanController::initialize()
 	  /* USER CODE END FDCAN1_Init 2 */
 }
 
-int CanController::transmitMsg(uint8_t idMsg, uint8_t *TxMsg, uint8_t msgLength)
+int CanController::transmitMsg(uint8_t idMsg, const uint8_t *TxMsg, uint8_t msgLength)
 {
 
 	//HAL_CAN_AddTxMessage(&_hcan1, &pHeader, TxMsg, &TxMailbox);
