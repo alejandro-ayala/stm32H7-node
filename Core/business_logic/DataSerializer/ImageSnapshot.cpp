@@ -8,9 +8,9 @@ namespace DataSerializer
 {
 ImageSnapshot::ImageSnapshot(uint8_t msgId, uint8_t msgIndex, uint8_t* msgBuffer, uint32_t imgSize, uint32_t timestamp) : m_msgId(msgId), m_msgIndex(msgIndex), m_imgSize(imgSize), m_timestamp(timestamp)
 {
-	this->m_imgBuffer = new uint8_t[MAXIMUN_CBOR_BUFFER_SIZE];
+	this->m_imgBuffer = new uint8_t[imgSize];
 	BUSINESS_LOGIC_ASSERT( m_imgBuffer != nullptr, services::BusinessLogicErrorId::MemoryAllocationFailed, "Can not allocate memory for image snapshot msg");
-	std::copy(msgBuffer + MAXIMUN_CBOR_BUFFER_SIZE*msgIndex, (msgBuffer + MAXIMUN_CBOR_BUFFER_SIZE*msgIndex) + MAXIMUN_CBOR_BUFFER_SIZE, this->m_imgBuffer);
+	std::copy(msgBuffer + imgSize*msgIndex, (msgBuffer + imgSize*msgIndex) + imgSize, this->m_imgBuffer);
 }
 
 ImageSnapshot::~ImageSnapshot()
@@ -27,7 +27,7 @@ void ImageSnapshot::serialize(std::vector<uint8_t>& serializeData) const
     }
     catch (const std::exception& e)
     {
-        std::cerr << "Error durante la serialización: " << e.what() << std::endl;
+
     }
 }
 

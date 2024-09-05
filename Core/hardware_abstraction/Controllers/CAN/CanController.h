@@ -20,7 +20,7 @@ public:
 	virtual ~CanController();
 
 	virtual void initialize() override;
-	int transmitMsg(uint8_t idMsg, uint8_t *TxMsg, uint8_t msgLength);
+	int transmitMsg(uint8_t idMsg, const uint8_t *TxMsg, uint8_t msgLength);
 	int receiveMsg(uint8_t *rxBuffer);
 	bool selfTest() override;
 };

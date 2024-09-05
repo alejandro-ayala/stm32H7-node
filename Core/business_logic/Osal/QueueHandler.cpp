@@ -1,10 +1,9 @@
 #include "QueueHandler.h"
-
 namespace business_logic
 {
 namespace Osal
 {
-QueueHandler::QueueHandler(uint32_t size, uint32_t length) : m_size(size), m_length(length)
+QueueHandler::QueueHandler(uint32_t queuelength, uint32_t itemSize) : m_queueLength(queuelength), m_itemSize(itemSize)
 {
 	createQueue();
 }
@@ -16,7 +15,7 @@ QueueHandler::~QueueHandler()
 
 void QueueHandler::createQueue()
 {
-	m_queue = xQueueCreate( m_size, m_length );
+	m_queue = xQueueCreate( m_queueLength, m_itemSize );
 
     if( m_queue == NULL )
     {
@@ -45,20 +44,24 @@ const char* QueueHandler::getName() const
 	return pcQueueGetName(m_queue);
 }
 
-void QueueHandler::sendToBack(const void * itemToQueue)
+bool QueueHandler::sendToBack(const void * itemToQueue)
 {
+	auto status = true;
 	if( xQueueSendToBack( m_queue, itemToQueue, static_cast<TickType_t>(0) ) != pdPASS )
 	{
-		/* Failed to post the message, even after 10 ticks. */
+		status = false;
 	}
+	return status;
 }
 
-void QueueHandler::sendToBack(const void * itemToQueue, uint32_t timeout)
+bool QueueHandler::sendToBack(const void * itemToQueue, uint32_t timeout)
 {
+	auto status = true;
 	if( xQueueSendToBack( m_queue, itemToQueue, static_cast<TickType_t>(timeout) ) != pdPASS )
 	{
-		/* Failed to post the message, even after 10 ticks. */
+		status = false;
 	}
+	return status;
 }
 
 void QueueHandler::sendToBackOverwrite(const void * itemToQueue)
@@ -75,39 +78,52 @@ void QueueHandler::sendToFront(const void * itemToQueue, uint32_t timeout)
 {
 	xQueueSendToFront( m_queue, itemToQueue, static_cast<TickType_t>(timeout));
 }
-	
-void QueueHandler::receive(void *rxBuffer)
+
+bool QueueHandler::receive(void *rxBuffer)
 {
+	auto isReceived = false;
 	if(xQueueReceive( m_queue, rxBuffer,static_cast<TickType_t>(portMAX_DELAY) ) == pdPASS )
 	{
+		isReceived = true;
 		/* xRxedStructure now contains a copy of xMessage. */
 	}
+
+	return isReceived;
 }
 
-void QueueHandler::receive(void *rxBuffer, uint32_t timeout)
+bool QueueHandler::receive(void *rxBuffer, uint32_t timeout)
 {
+	auto isReceived = false;
 	if(xQueueReceive( m_queue, rxBuffer,static_cast<TickType_t>(timeout) ) == pdPASS )
 	{
+		isReceived = true;
 		/* xRxedStructure now contains a copy of xMessage. */
 	}
+	return isReceived;
 }
 
-void QueueHandler::peek(void *rxBuffer)
+bool QueueHandler::peek(void *rxBuffer)
 {
+	auto isReceived = false;
 	if( xQueuePeek( m_queue, rxBuffer, static_cast<TickType_t>(0)) )
 	{
+		isReceived = true;
 		// pcRxedMessage now points to the struct AMessage variable posted
 		// by vATask, but the item still remains on the queue.
 	}
+	return isReceived;
 }
 
-void QueueHandler::peek(void *rxBuffer, uint32_t timeout)
+bool QueueHandler::peek(void *rxBuffer, uint32_t timeout)
 {
+	auto isReceived = false;
 	if( xQueuePeek( m_queue, rxBuffer, static_cast<TickType_t>(timeout)) )
 	{
+		isReceived = true;
 		// pcRxedMessage now points to the struct AMessage variable posted
 		// by vATask, but the item still remains on the queue.
 	}
+	return isReceived;
 }
 
 uint32_t QueueHandler::getStoredMsg() const

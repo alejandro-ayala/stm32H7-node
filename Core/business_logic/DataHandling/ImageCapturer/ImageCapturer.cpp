@@ -1,5 +1,6 @@
 #include "RLEEncoder.h"
 
+#include "business_logic/DataSerializer/ImageSnapshot.h"
 #include "../../DataSerializer/DataSerializer.h"
 #include "ImageCapturer.h"
 #include "services/Exception/SystemExceptions.h"
@@ -14,7 +15,7 @@ namespace business_logic
 namespace DataHandling
 {
 
-ImageCapturer::ImageCapturer(const std::shared_ptr<hardware_abstraction::Devices::ICameraDevice>& cameraControl, const std::shared_ptr<business_logic::Osal::QueueHandler> capturesQueue) : m_cameraControl(cameraControl), m_capturesQueue(capturesQueue)
+ImageCapturer::ImageCapturer(const std::shared_ptr<hardware_abstraction::Devices::ICameraDevice>& cameraControl) : m_cameraControl(cameraControl)
 {
 	m_imageConfig = cameraControl->getImageResolution();
 	m_pic   = new uint8_t[m_imageConfig.imageWidth * m_imageConfig.imageHeight];
@@ -79,7 +80,7 @@ size_t ImageCapturer::getRawImageBufferSize() const
     return m_picSize;
 }
 
-unsigned long ImageCapturer::processEdges(const  uint8_t* image, uint8_t* edges, size_t size)
+unsigned long ImageCapturer::processEdges(const  uint8_t* image, uint8_t*& edges, size_t size)
 {
 	m_edgeDetector->processImage(image, edges, size);
 
@@ -107,6 +108,12 @@ unsigned long ImageCapturer::processEdges(const  uint8_t* image, uint8_t* edges,
 	unsigned long compressedSize = 0;
 	m_imageCompressor->compress(m_pic, &edges, &compressedSize, m_imageConfig.imageQuality, m_imageState);
 	std::cout << " Compressed edges image with" << std::endl;
+
+//	business_logic::DataSerializer::ImageSnapshot edgesSnapshot2;
+//	business_logic::DataSerializer::ImageSnapshot *pxPointerToxMessage = nullptr;
+//	m_capturesQueue->receive(&pxPointerToxMessage);
+//	edgesSnapshot2 = *pxPointerToxMessage;
+
 	return compressedSize;
 #endif
 }

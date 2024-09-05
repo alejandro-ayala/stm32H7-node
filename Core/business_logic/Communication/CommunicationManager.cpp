@@ -1,7 +1,6 @@
 
 #include "CommunicationManager.h"
 #include "CanIDs.h"
-#include "IData.h"
 #include <iostream>
 
 #include "../../hardware_abstraction/Controllers/CAN/CanController.h"
@@ -24,15 +23,15 @@ void CommunicationManager::initialization()
 	//canController->initialize();
 }
 
-void CommunicationManager::sendData(IData msg)
+void CommunicationManager::sendData(const std::vector<uint8_t>& msg)
 {
-	uint64_t localNs = timeController->getLocalTime();
-	msg.timestamp = localNs;
-	uint8_t serializedMsg[20];
-	uint8_t frameSize = msg.serialize(serializedMsg) + 7;
-	std::cout << "sendingMsg[ " << serializedMsg[5] << "]" << msg.timestamp << "-" << serializedMsg[7] << serializedMsg[8] << serializedMsg[9] << serializedMsg[10] << std::endl;
+//	uint64_t localNs = timeController->getLocalTime();
+//	msg.timestamp = localNs;
+//	uint8_t serializedMsg[20];
+//	uint8_t frameSize = msg.serialize(serializedMsg) + 7;
+//	std::cout << "sendingMsg[ " << serializedMsg[5] << "]" << msg.timestamp << "-" << serializedMsg[7] << serializedMsg[8] << serializedMsg[9] << serializedMsg[10] << std::endl;
 
-	canController->transmitMsg(static_cast<uint8_t>(CAN_IDs::SENSOR_DATA), serializedMsg,frameSize);
+	canController->transmitMsg(static_cast<uint8_t>(CAN_IDs::SENSOR_DATA), msg.data(),msg.size());
 
 }
 
@@ -45,9 +44,9 @@ void CommunicationManager::receiveData()
 	if(msgSize > 0)
 	{
 		//xil_printf("\n\rReceived data: %d bytes", msgSize);
-		IData parsedMsg;
-		parsedMsg.deSerialize(data);
-		std::cout << "newData[" << parsedMsg.secCounter << "]. sec: " << parsedMsg.timestamp << std::endl;
+//		IData parsedMsg;
+//		parsedMsg.deSerialize(data);
+//		std::cout << "newData[" << parsedMsg.secCounter << "]. sec: " << parsedMsg.timestamp << std::endl;
 	}
 }
 
