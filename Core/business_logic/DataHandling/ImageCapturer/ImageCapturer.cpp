@@ -17,7 +17,7 @@ namespace DataHandling
 
 ImageCapturer::ImageCapturer(const std::shared_ptr<hardware_abstraction::Devices::ICameraDevice>& cameraControl) : m_cameraControl(cameraControl)
 {
-	m_imageConfig = cameraControl->getImageResolution();
+	m_imageConfig = m_cameraControl->getImageResolution();
 	m_pic   = new uint8_t[m_imageConfig.imageWidth * m_imageConfig.imageHeight];
 	if(m_pic == nullptr)
 	{
