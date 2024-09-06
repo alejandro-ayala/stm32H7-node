@@ -13,20 +13,24 @@ SystemTasks::SystemTasks(const std::shared_ptr<business_logic::Communication::Co
 	m_capturesQueue = std::make_shared<business_logic::Osal::QueueHandler>(queueLength, queueItemSize);
 	createPoolTasks(commMng, imageCapturer, sharedClkMng);
 	m_dataSerializer = std::make_shared<business_logic::DataSerializer::DataSerializer>();
+
+	m_taskParam.imageCapturer = imageCapturer;
+	m_taskParam.sharedClkMng  = sharedClkMng;
 }
 
 void SystemTasks::createPoolTasks(const std::shared_ptr<business_logic::Communication::CommunicationManager>& commMng, const std::shared_ptr<business_logic::DataHandling::ImageCapturer>& imageCapturer, const std::shared_ptr<business_logic::ClockSyncronization::SharedClockSlaveManager>& sharedClkMng)
 {
 	m_clockSyncTaskHandler    = std::make_shared<business_logic::Osal::TaskHandler>(SystemTasks::syncronizationGlobalClock, "syncronizationGlobalClockTask", DefaultPriorityTask, static_cast<business_logic::Osal::VoidPtr>(sharedClkMng.get()));
-	m_dataHandlingTaskHandler = std::make_shared<business_logic::Osal::TaskHandler>(SystemTasks::captureImage, "readSensorsTask", DefaultPriorityTask, static_cast<business_logic::Osal::VoidPtr>(imageCapturer.get()), 4096);
+	m_dataHandlingTaskHandler = std::make_shared<business_logic::Osal::TaskHandler>(SystemTasks::edgeDetection, "edgeDetection", DefaultPriorityTask, static_cast<business_logic::Osal::VoidPtr>(&m_taskParam), 4096);
 	m_commTaskHandler         = std::make_shared<business_logic::Osal::TaskHandler>(SystemTasks::sendData, "sendDataTask", DefaultPriorityTask, static_cast<business_logic::Osal::VoidPtr>(commMng.get()), 4096);
 
 }
 
-void SystemTasks::captureImage(void* argument)
+void SystemTasks::edgeDetection(void* argument)
 {
-	auto imageCapturer = std::make_shared<business_logic::DataHandling::ImageCapturer>(*static_cast<business_logic::DataHandling::ImageCapturer*>(argument));
-
+	auto taskArg = static_cast<TaskParams*>(argument);
+	auto imageCapturer = taskArg->imageCapturer;//std::make_shared<business_logic::DataHandling::ImageCapturer>(*static_cast<business_logic::DataHandling::ImageCapturer*>(taskArg->imageCapturer.get()));
+	auto sharedClkMng  = taskArg->sharedClkMng;
 	const auto periodTimeCaptureImage = 2000;
 	const auto delayCameraStartup     = 1000;
 
@@ -44,6 +48,7 @@ void SystemTasks::captureImage(void* argument)
 	for(;;)
 	{
 		imageCapturer->captureImage();
+		const auto captureTimestamp = sharedClkMng->getTimeReference().toNs();
 		m_dataHandlingTaskHandler->delayUntil(periodTimeCaptureImage);
 		imageCapturer->extractImage();
 
@@ -56,7 +61,7 @@ void SystemTasks::captureImage(void* argument)
 		auto edgesPtr = edges->data();
 		const auto edgeCompressedImgSize = imageCapturer->processEdges(rawImgBuffer, edgesPtr, bufferSize);
 
-		business_logic::DataSerializer::ImageSnapshot edgesSnapshot{0xE3, 0x00, edgesPtr, edgeCompressedImgSize, 0xFE34};
+		business_logic::DataSerializer::ImageSnapshot edgesSnapshot{0xE3, 0x00, edgesPtr, edgeCompressedImgSize, captureTimestamp};
 		const auto isInserted = m_capturesQueue->sendToBack(( void * ) &edgesSnapshot);
 		if(!isInserted)
 		{
