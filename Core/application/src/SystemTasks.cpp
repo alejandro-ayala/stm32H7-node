@@ -93,6 +93,10 @@ void SystemTasks::sendData(void* argument)
 		        m_dataSerializer->serialize(msg, serializeMsg);
 		        const auto ptrSerializedMsg = serializeMsg.data();
 		        const auto serializedMsgSize = serializeMsg.size();
+		        if(serializedMsgSize > 64)
+		        {
+		        	std::cout << "FD_CAN buffer overflow" << std::endl;
+		        }
 				commMng->sendData(serializeMsg);
 		    }
 		}
