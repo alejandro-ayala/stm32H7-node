@@ -36,7 +36,6 @@ void CommunicationManager::sendData(const std::vector<uint8_t>& msg)
         {
             data[i] = msgPtr[i];
         }
-
         canController->transmitMsg(static_cast<uint8_t>(CAN_IDs::IMAGE_DATA), data);
 
         msgPtr += bytesToSend;
