@@ -11,7 +11,9 @@ class CanController : public IController
 {
 private:
 	FDCAN_HandleTypeDef hfdcan1;
-
+	FDCAN_FilterTypeDef sFilterConfig;
+	FDCAN_TxHeaderTypeDef TxHeader;
+	FDCAN_RxHeaderTypeDef RxHeader;
 	uint32_t TxMailbox;
 	int deviceId;
 
@@ -23,6 +25,8 @@ public:
 	int transmitMsg(uint8_t idMsg, const uint8_t *TxMsg, uint8_t msgLength);
 	int receiveMsg(uint8_t *rxBuffer);
 	bool selfTest() override;
+	void integrationTest();
+	void externalLoopbackTest();
 };
 }
 }
