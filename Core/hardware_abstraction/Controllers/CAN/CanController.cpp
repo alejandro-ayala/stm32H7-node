@@ -8,6 +8,8 @@ namespace Controllers
 CanController::CanController() : IController("CanController")
 {
 	initialize();
+    HAL_FDCAN_DeInit(&hfdcan1);
+    initialize();
 }
 
 CanController::~CanController()
@@ -17,7 +19,10 @@ CanController::~CanController()
 
 void CanController::initialize()
 {
+
+
 	  /* USER CODE BEGIN FDCAN1_Init 0 */
+	 // HAL_FDCAN_DeInit(&hfdcan1);
 	  hfdcan1.Instance = FDCAN1;
 	  hfdcan1.Init.FrameFormat = FDCAN_FRAME_FD_BRS;
 	  hfdcan1.Init.Mode = FDCAN_MODE_NORMAL;
@@ -47,9 +52,7 @@ void CanController::initialize()
 	  hfdcan1.Init.TxFifoQueueMode = FDCAN_TX_FIFO_OPERATION;
 	  hfdcan1.Init.TxElmtSize = FDCAN_DATA_BYTES_8;
 	  HAL_FDCAN_Init(&hfdcan1);
-	  /* USER CODE END FDCAN1_Init 0 */
 
-	  /* USER CODE BEGIN FDCAN1_Init 1 */
 	  /* Configure Rx filter */
 	  FDCAN_FilterTypeDef        sFilterConfig;
 	  sFilterConfig.IdType = FDCAN_STANDARD_ID;
@@ -59,41 +62,32 @@ void CanController::initialize()
 	  sFilterConfig.FilterID1 = 0x111;
 	  sFilterConfig.FilterID2 = 0x7FF; /* For acceptance, MessageID and FilterID1 must match exactly */
 	  HAL_FDCAN_ConfigFilter(&hfdcan1, &sFilterConfig);
-	  /* USER CODE END FDCAN1_Init 1 */
-
-	  /* USER CODE BEGIN FDCAN1_Init 2 */
 
 	  /* Configure global filter to reject all non-matching frames */
 	  HAL_FDCAN_ConfigGlobalFilter(&hfdcan1, FDCAN_REJECT, FDCAN_REJECT, FDCAN_REJECT_REMOTE, FDCAN_REJECT_REMOTE);
 
 	  /* Start the FDCAN module */
 	  HAL_FDCAN_Start(&hfdcan1);
-
-	  /* USER CODE END FDCAN1_Init 2 */
+	  /* USER CODE END FDCAN1_Init 0*/
 }
 
-int CanController::transmitMsg(uint8_t idMsg, const uint8_t *TxMsg, uint8_t msgLength)
+int CanController::transmitMsg(uint8_t idMsg, const uint8_t *txMsg)
 {
-
-	uint8_t TxData0[] = {0x10, 0x32, 0x54, 0x76, 0x98, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66};
-
-	  /* Configure Tx buffer message */
-	  TxHeader.Identifier = 0x111;
-	  TxHeader.IdType = FDCAN_STANDARD_ID;
-	  TxHeader.TxFrameType = FDCAN_DATA_FRAME;
-	  TxHeader.DataLength = FDCAN_DLC_BYTES_12;
-	  TxHeader.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
-	  TxHeader.BitRateSwitch = FDCAN_BRS_ON;
-	  TxHeader.FDFormat = FDCAN_FD_CAN;
-	  TxHeader.TxEventFifoControl = FDCAN_STORE_TX_EVENTS;
-	  TxHeader.MessageMarker = 0x52;
-	  HAL_FDCAN_AddMessageToTxBuffer(&hfdcan1, &TxHeader, TxData0, FDCAN_TX_BUFFER0);
-
-	  /* Start the FDCAN module */
-	  HAL_FDCAN_Start(&hfdcan1);
-
-	  /* Send Tx buffer message */
-	  HAL_FDCAN_EnableTxBufferRequest(&hfdcan1, FDCAN_TX_BUFFER0);
+//    HAL_FDCAN_DeInit(&hfdcan1);
+//    initialize();
+	txHeader.Identifier = idMsg;
+	txHeader.IdType = FDCAN_STANDARD_ID;
+	txHeader.TxFrameType = FDCAN_DATA_FRAME;
+	txHeader.DataLength = FDCAN_DLC_BYTES_8;
+	txHeader.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
+	txHeader.BitRateSwitch = FDCAN_BRS_OFF;
+	txHeader.FDFormat = FDCAN_CLASSIC_CAN;
+	txHeader.TxEventFifoControl = FDCAN_STORE_TX_EVENTS;
+	txHeader.MessageMarker = 0xCC;
+	if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &txHeader, txMsg) != HAL_OK)
+	{
+	  return HAL_ERROR;
+	}
 }
 
 int CanController::receiveMsg(uint8_t *rxBuffer)
@@ -104,7 +98,7 @@ int CanController::receiveMsg(uint8_t *rxBuffer)
 void CanController::integrationTest()
 {
   HAL_FDCAN_DeInit(&hfdcan1);
-  uint8_t RxData[16U];
+  uint8_t rxData[16U];
   hfdcan1.Instance = FDCAN1;
   hfdcan1.Init.FrameFormat = FDCAN_FRAME_FD_BRS;
   hfdcan1.Init.Mode = FDCAN_MODE_NORMAL;
@@ -153,7 +147,7 @@ void CanController::integrationTest()
 
   /* Infinite loop */
   auto enable_tx = 1;
-  static const uint8_t TxData[] = {0x10, 0x32, 0x54, 0x76, 0x98, 0x00, 0x11, 0x22,
+  static const uint8_t txData[] = {0x10, 0x32, 0x54, 0x76, 0x98, 0x00, 0x11, 0x22,
                                    0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0x00
                                   };
   while(1)
@@ -162,37 +156,37 @@ void CanController::integrationTest()
 	if(enable_tx)
 	{
 
-		  TxHeader.Identifier = 0x122;
-		  TxHeader.IdType = FDCAN_STANDARD_ID;
-		  TxHeader.TxFrameType = FDCAN_DATA_FRAME;
-		  TxHeader.DataLength = FDCAN_DLC_BYTES_8;
-		  TxHeader.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
-		  TxHeader.BitRateSwitch = FDCAN_BRS_OFF;
-		  TxHeader.FDFormat = FDCAN_CLASSIC_CAN;
-		  TxHeader.TxEventFifoControl = FDCAN_STORE_TX_EVENTS;
-		  TxHeader.MessageMarker = 0xCC;
+		  txHeader.Identifier = 0x122;
+		  txHeader.IdType = FDCAN_STANDARD_ID;
+		  txHeader.TxFrameType = FDCAN_DATA_FRAME;
+		  txHeader.DataLength = FDCAN_DLC_BYTES_8;
+		  txHeader.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
+		  txHeader.BitRateSwitch = FDCAN_BRS_OFF;
+		  txHeader.FDFormat = FDCAN_CLASSIC_CAN;
+		  txHeader.TxEventFifoControl = FDCAN_STORE_TX_EVENTS;
+		  txHeader.MessageMarker = 0xCC;
 
-	    HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader, &TxData[0]);
-	    //HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader, &TxData[8]);
+	    HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &txHeader, &txData[0]);
+	    //HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &txHeader, &TxData[8]);
 	}
 	else
 	{
 		/* Wait for two messages received */
 		while (HAL_FDCAN_GetRxFifoFillLevel(&hfdcan1, FDCAN_RX_FIFO0) < 2) {}
 	/* Retrieve Rx messages from RX FIFO0 */
-		HAL_FDCAN_GetRxMessage(&hfdcan1, FDCAN_RX_FIFO0, &RxHeader, RxData);
-		HAL_FDCAN_GetRxMessage(&hfdcan1, FDCAN_RX_FIFO0, &RxHeader, &RxData[8]);
+		HAL_FDCAN_GetRxMessage(&hfdcan1, FDCAN_RX_FIFO0, &rxHeader, rxData);
+		HAL_FDCAN_GetRxMessage(&hfdcan1, FDCAN_RX_FIFO0, &rxHeader, &rxData[8]);
 	}
   }
 }
 
 void CanController::externalLoopbackTest()
 {
-	uint8_t RxData[16U];
+	uint8_t rxData[16U];
 	HAL_FDCAN_DeInit(&hfdcan1);
-	static const uint8_t  TxData0[] = {0x10, 0x32, 0x54, 0x76, 0x98, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66};
-	static const uint8_t  TxData1[] = {0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55};
-	static const uint8_t  TxData2[] = {0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00};
+	static const uint8_t  txData0[] = {0x10, 0x32, 0x54, 0x76, 0x98, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66};
+	static const uint8_t  txData1[] = {0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55};
+	static const uint8_t  txData2[] = {0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00};
 	  /* Initializes the FDCAN peripheral in loopback mode */
 	  hfdcan1.Instance = FDCAN1;
 	  hfdcan1.Init.FrameFormat = FDCAN_FRAME_FD_BRS;
@@ -268,16 +262,16 @@ void CanController::externalLoopbackTest()
 	  HAL_FDCAN_ConfigFilter(&hfdcan1, &sFilterConfig);
 
 	  /* Configure Tx buffer message */
-	  TxHeader.Identifier = 0x111;
-	  TxHeader.IdType = FDCAN_STANDARD_ID;
-	  TxHeader.TxFrameType = FDCAN_DATA_FRAME;
-	  TxHeader.DataLength = FDCAN_DLC_BYTES_12;
-	  TxHeader.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
-	  TxHeader.BitRateSwitch = FDCAN_BRS_ON;
-	  TxHeader.FDFormat = FDCAN_FD_CAN;
-	  TxHeader.TxEventFifoControl = FDCAN_STORE_TX_EVENTS;
-	  TxHeader.MessageMarker = 0x52;
-	  HAL_FDCAN_AddMessageToTxBuffer(&hfdcan1, &TxHeader, TxData0, FDCAN_TX_BUFFER0);
+	  txHeader.Identifier = 0x111;
+	  txHeader.IdType = FDCAN_STANDARD_ID;
+	  txHeader.TxFrameType = FDCAN_DATA_FRAME;
+	  txHeader.DataLength = FDCAN_DLC_BYTES_12;
+	  txHeader.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
+	  txHeader.BitRateSwitch = FDCAN_BRS_ON;
+	  txHeader.FDFormat = FDCAN_FD_CAN;
+	  txHeader.TxEventFifoControl = FDCAN_STORE_TX_EVENTS;
+	  txHeader.MessageMarker = 0x52;
+	  HAL_FDCAN_AddMessageToTxBuffer(&hfdcan1, &txHeader, txData0, FDCAN_TX_BUFFER0);
 
 	  /* Start the FDCAN module */
 	  HAL_FDCAN_Start(&hfdcan1);
@@ -286,38 +280,38 @@ void CanController::externalLoopbackTest()
 	  HAL_FDCAN_EnableTxBufferRequest(&hfdcan1, FDCAN_TX_BUFFER0);
 
 	  /* Add message to Tx FIFO */
-	  TxHeader.Identifier = 0x1111112;
-	  TxHeader.IdType = FDCAN_EXTENDED_ID;
-	  TxHeader.TxFrameType = FDCAN_DATA_FRAME;
-	  TxHeader.DataLength = FDCAN_DLC_BYTES_12;
-	  TxHeader.ErrorStateIndicator = FDCAN_ESI_PASSIVE;
-	  TxHeader.BitRateSwitch = FDCAN_BRS_ON;
-	  TxHeader.FDFormat = FDCAN_FD_CAN;
-	  TxHeader.TxEventFifoControl = FDCAN_STORE_TX_EVENTS;
-	  TxHeader.MessageMarker = 0xCC;
-	  HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader, TxData1);
+	  txHeader.Identifier = 0x1111112;
+	  txHeader.IdType = FDCAN_EXTENDED_ID;
+	  txHeader.TxFrameType = FDCAN_DATA_FRAME;
+	  txHeader.DataLength = FDCAN_DLC_BYTES_12;
+	  txHeader.ErrorStateIndicator = FDCAN_ESI_PASSIVE;
+	  txHeader.BitRateSwitch = FDCAN_BRS_ON;
+	  txHeader.FDFormat = FDCAN_FD_CAN;
+	  txHeader.TxEventFifoControl = FDCAN_STORE_TX_EVENTS;
+	  txHeader.MessageMarker = 0xCC;
+	  HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &txHeader, txData1);
 
 	  /* Add second message to Tx FIFO */
-	  TxHeader.Identifier = 0x2222222;
-	  TxHeader.IdType = FDCAN_EXTENDED_ID;
-	  TxHeader.TxFrameType = FDCAN_DATA_FRAME;
-	  TxHeader.DataLength = FDCAN_DLC_BYTES_12;
-	  TxHeader.ErrorStateIndicator = FDCAN_ESI_PASSIVE;
-	  TxHeader.BitRateSwitch = FDCAN_BRS_OFF;
-	  TxHeader.FDFormat = FDCAN_FD_CAN;
-	  TxHeader.TxEventFifoControl = FDCAN_STORE_TX_EVENTS;
-	  TxHeader.MessageMarker = 0xDD;
-	  HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader, TxData2);
+	  txHeader.Identifier = 0x2222222;
+	  txHeader.IdType = FDCAN_EXTENDED_ID;
+	  txHeader.TxFrameType = FDCAN_DATA_FRAME;
+	  txHeader.DataLength = FDCAN_DLC_BYTES_12;
+	  txHeader.ErrorStateIndicator = FDCAN_ESI_PASSIVE;
+	  txHeader.BitRateSwitch = FDCAN_BRS_OFF;
+	  txHeader.FDFormat = FDCAN_FD_CAN;
+	  txHeader.TxEventFifoControl = FDCAN_STORE_TX_EVENTS;
+	  txHeader.MessageMarker = 0xDD;
+	  HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &txHeader, txData2);
 
 	  /* Retrieve message from Rx buffer 0 */
-	  HAL_FDCAN_GetRxMessage(&hfdcan1, FDCAN_RX_BUFFER0, &RxHeader, RxData);
+	  HAL_FDCAN_GetRxMessage(&hfdcan1, FDCAN_RX_BUFFER0, &rxHeader, rxData);
 
 	  /* Retrieve message from Rx FIFO 1 */
-	  HAL_FDCAN_GetRxMessage(&hfdcan1, FDCAN_RX_FIFO1, &RxHeader, RxData);
+	  HAL_FDCAN_GetRxMessage(&hfdcan1, FDCAN_RX_FIFO1, &rxHeader, rxData);
 
 
 	  /* Retrieve next message from Rx FIFO 1 */
-	  HAL_FDCAN_GetRxMessage(&hfdcan1, FDCAN_RX_FIFO1, &RxHeader, RxData);
+	  HAL_FDCAN_GetRxMessage(&hfdcan1, FDCAN_RX_FIFO1, &rxHeader, rxData);
 
 
 }

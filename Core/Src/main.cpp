@@ -83,7 +83,6 @@ static void MX_USART3_UART_Init(void);
 static void MX_USB_OTG_HS_USB_Init(void);
 static void MX_DCMI_Init(void);
 static void MX_ETH_Init(void);
-static void MX_FDCAN1_Init(void);
 void StartDefaultTask(void const * argument);
 
 /* USER CODE BEGIN PFP */
@@ -150,9 +149,6 @@ int main(void)
 
   /* Configure the system clock */
   SystemClock_Config();
-  cancontroller->externalLoopbackTest();
-
-  cancontroller->integrationTest();
 
   /* USER CODE BEGIN SysInit */
 
