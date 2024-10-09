@@ -25,14 +25,23 @@ void CommunicationManager::initialization()
 
 void CommunicationManager::sendData(const std::vector<uint8_t>& msg)
 {
-//	uint64_t localNs = timeController->getLocalTime();
-//	msg.timestamp = localNs;
-//	uint8_t serializedMsg[20];
-//	uint8_t frameSize = msg.serialize(serializedMsg) + 7;
-//	std::cout << "sendingMsg[ " << serializedMsg[5] << "]" << msg.timestamp << "-" << serializedMsg[7] << serializedMsg[8] << serializedMsg[9] << serializedMsg[10] << std::endl;
+    uint8_t bytesRemaining = msg.size();
+    const uint8_t *msgPtr = msg.data();
+    while (bytesRemaining > 0)
+    {
+        uint8_t bytesToSend = (bytesRemaining > 8) ? 8 : bytesRemaining;
 
-	canController->transmitMsg(static_cast<uint8_t>(CAN_IDs::SENSOR_DATA), msg.data(),msg.size());
+        uint8_t data[8] = {0};
+        for (uint8_t i = 0; i < bytesToSend; i++)
+        {
+            data[i] = msgPtr[i];
+        }
 
+        canController->transmitMsg(static_cast<uint8_t>(CAN_IDs::IMAGE_DATA), data);
+
+        msgPtr += bytesToSend;
+        bytesRemaining -= bytesToSend;
+    }
 }
 
 void CommunicationManager::receiveData()
