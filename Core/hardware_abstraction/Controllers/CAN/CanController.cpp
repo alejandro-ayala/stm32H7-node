@@ -48,7 +48,7 @@ void CanController::initialize()
 	  hfdcan1.Init.RxBuffersNbr = 0;
 	  hfdcan1.Init.TxEventsNbr = 0;
 	  hfdcan1.Init.TxBuffersNbr = 0;
-	  hfdcan1.Init.TxFifoQueueElmtsNbr = 2;
+	  hfdcan1.Init.TxFifoQueueElmtsNbr = 32;
 	  hfdcan1.Init.TxFifoQueueMode = FDCAN_TX_FIFO_OPERATION;
 	  hfdcan1.Init.TxElmtSize = FDCAN_DATA_BYTES_8;
 	  HAL_FDCAN_Init(&hfdcan1);
