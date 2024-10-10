@@ -78,16 +78,24 @@ int CanController::transmitMsg(uint8_t idMsg, const uint8_t *txMsg)
 	txHeader.Identifier = idMsg;
 	txHeader.IdType = FDCAN_STANDARD_ID;
 	txHeader.TxFrameType = FDCAN_DATA_FRAME;
-	txHeader.DataLength = FDCAN_DLC_BYTES_8;
+	txHeader.DataLength = FDCAN_DLC_BYTES_64;
 	txHeader.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
 	txHeader.BitRateSwitch = FDCAN_BRS_OFF;
 	txHeader.FDFormat = FDCAN_CLASSIC_CAN;
 	txHeader.TxEventFifoControl = FDCAN_STORE_TX_EVENTS;
 	txHeader.MessageMarker = 0xCC;
+	auto fifoSpace = HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan1);
+	while(fifoSpace == 0)
+	{
+		HAL_Delay(300);
+		fifoSpace = HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan1);
+	}
+
 	if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &txHeader, txMsg) != HAL_OK)
 	{
 	  return HAL_ERROR;
 	}
+
 }
 
 int CanController::receiveMsg(uint8_t *rxBuffer)

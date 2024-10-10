@@ -28,6 +28,8 @@ ImageCapturer::ImageCapturer(const std::shared_ptr<hardware_abstraction::Devices
 	m_edgeDetector = std::make_shared<EdgeDetector>(std::make_shared<SobelEdgeDetectorAlgorithm>(m_imageConfig));
 	//BUSINESS_LOGIC_ASSERT( m_capturesQueue->getAvailableSpace() != 0, services::BusinessLogicErrorId::QueueIsFull, "Queue to store the camera images is full");
 	m_imageEncoder   = std::make_shared<RLEEncoder>();
+
+	m_imageCompressor = std::make_shared<JpegCompressor>();
 }
 
 ImageCapturer::~ImageCapturer()

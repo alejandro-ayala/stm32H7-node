@@ -1,46 +1,62 @@
 #include "JpegCompressor.h"
-
+#include <stdexcept>
+#include <new> // Para std::nothrow
+#include <memory>
 
 namespace business_logic
 {
 namespace DataHandling
 {
 
-void JpegCompressor::setupDecodeJPEG(uint8_t *jpegImg, uint16_t buffer_length,uint8_t greyscale, ImageState& imageState, struct jpeg_decompress_struct& cinfo, struct jpeg_error_mgr& jerr)
+JpegCompressor::JpegCompressor()
 {
-	cinfo.err = jpeg_std_error(&jerr);
+	m_cinfo_comp.err = jpeg_std_error(&m_jerr);
+    jpeg_create_compress(&m_cinfo_comp);
 
+    m_cinfo_decomp.err = jpeg_std_error(&m_jerr);
+    jpeg_create_decompress(&m_cinfo_decomp);
+}
 
-	jpeg_create_decompress(&cinfo);
-	jpeg_mem_src(&cinfo, jpegImg, buffer_length);
-	jpeg_read_header(&cinfo, TRUE);
-	jpeg_start_decompress(&cinfo);
+JpegCompressor::~JpegCompressor()
+{
+    jpeg_destroy_decompress(&m_cinfo_decomp);
+    jpeg_destroy_compress(&m_cinfo_comp);
 
-	imageState.image_width = cinfo.output_width;
-	imageState.image_heigh = cinfo.output_height;
+}
 
-	if (greyscale == 1)
-	{
-		imageState.image_byte_per_pixel = 1;
-		imageState.grayscale=1;
-	}
-	else
-	{
-		imageState.image_byte_per_pixel = cinfo.num_components;
-		imageState.grayscale=0;
-	}
+void JpegCompressor::setupDecodeJPEG(uint8_t *jpegImg, uint16_t buffer_length, uint8_t greyscale, ImageState& imageState)
+{
 
+    jpeg_mem_src(&m_cinfo_decomp, jpegImg, buffer_length);
+
+    if (jpeg_read_header(&m_cinfo_decomp, TRUE) != JPEG_HEADER_OK) {
+        jpeg_destroy_decompress(&m_cinfo_decomp);
+        throw std::runtime_error("Error al leer el encabezado JPEG");
+    }
+
+    jpeg_start_decompress(&m_cinfo_decomp);
+
+    imageState.image_width = m_cinfo_decomp.output_width;
+    imageState.image_heigh = m_cinfo_decomp.output_height;
+
+    if (greyscale == 1 && m_cinfo_decomp.num_components == 3)
+    {
+        imageState.image_byte_per_pixel = 1;
+        imageState.grayscale = 1;
+    }
+    else
+    {
+        imageState.image_byte_per_pixel = m_cinfo_decomp.num_components;
+        imageState.grayscale = (m_cinfo_decomp.num_components == 1) ? 1 : 0;
+    }
 }
 
 unsigned long JpegCompressor::decompress(uint8_t *jpegImg, uint16_t jpegImgSize, uint8_t *rawImg, size_t& rawImgSize, uint8_t greyscale, ImageState& imageState)
 {
-	struct jpeg_error_mgr jerr;
-	struct jpeg_decompress_struct cinfo;
-	setupDecodeJPEG(jpegImg, jpegImgSize, greyscale, imageState, cinfo, jerr);
-
+    setupDecodeJPEG(jpegImg, jpegImgSize, greyscale, imageState);
 	JSAMPROW row_pointer[1];
 	//row_pointer[0] = (unsigned char*) malloc(cinfo.output_width * cinfo.num_components);
-	row_pointer[0]   = new unsigned char[cinfo.output_width * cinfo.num_components];
+	row_pointer[0]   = new unsigned char[m_cinfo_decomp.output_width * m_cinfo_decomp.num_components];
 
 #ifdef FLOAT_ENABLE
 	float value_red, value_green, value_blue;
@@ -50,10 +66,10 @@ unsigned long JpegCompressor::decompress(uint8_t *jpegImg, uint16_t jpegImgSize,
 
 	uint8_t pixel_number = 0;
 	unsigned long pixel_location = 0;
-	while (cinfo.output_scanline < cinfo.image_height)
+	while (m_cinfo_decomp.output_scanline < m_cinfo_decomp.image_height)
 	{
-		jpeg_read_scanlines(&cinfo, row_pointer, 1);
-		for (short i = 0; i < cinfo.image_width * cinfo.num_components; i++)
+		jpeg_read_scanlines(&m_cinfo_decomp, row_pointer, 1);
+		for (short i = 0; i < m_cinfo_decomp.image_width * m_cinfo_decomp.num_components; i++)
 		{
 			if(greyscale==1)
 			{
@@ -83,49 +99,38 @@ unsigned long JpegCompressor::decompress(uint8_t *jpegImg, uint16_t jpegImgSize,
 	}
 
 	rawImgSize = pixel_location;
-	jpeg_finish_decompress(&cinfo);
-	jpeg_destroy_decompress(&cinfo);
+	jpeg_finish_decompress(&m_cinfo_decomp);
 	delete[] row_pointer[0];
 	return pixel_location;
 }
 
-void JpegCompressor::setupEncodeJPEG(uint8_t **image_buffer, unsigned long *image_size, uint8_t image_quality, ImageState imageState, struct jpeg_compress_struct& cinfo, struct jpeg_error_mgr& jerr)
+void JpegCompressor::setupEncodeJPEG(uint8_t **image_buffer, unsigned long *image_size, uint8_t image_quality, ImageState imageState)
 {
-	cinfo.err = jpeg_std_error( &jerr );
-	jpeg_create_compress(&cinfo);
-	cinfo.image_width = imageState.image_width;
-	cinfo.image_height = imageState.image_heigh;
-	cinfo.input_components = imageState.image_byte_per_pixel;
-	if(imageState.grayscale==1)
-	{
-		cinfo.in_color_space = JCS_GRAYSCALE;
-	}
-	else
-	{
-		cinfo.in_color_space = JCS_RGB;
-	}
-	jpeg_set_defaults( &cinfo );
-	jpeg_set_quality(&cinfo, image_quality, TRUE );
-	jpeg_mem_dest(&cinfo, image_buffer, image_size);
-	jpeg_start_compress( &cinfo, TRUE );
+    jpeg_mem_dest(&m_cinfo_comp, image_buffer, image_size);
+
+    m_cinfo_comp.image_width = imageState.image_width;
+    m_cinfo_comp.image_height = imageState.image_heigh;
+    m_cinfo_comp.input_components = imageState.image_byte_per_pixel;
+    m_cinfo_comp.in_color_space = imageState.grayscale ? JCS_GRAYSCALE : JCS_RGB;
+
+    jpeg_set_defaults(&m_cinfo_comp);
+    jpeg_set_quality(&m_cinfo_comp, image_quality, TRUE);
+    jpeg_start_compress(&m_cinfo_comp, TRUE);
 }
 
 void JpegCompressor::compress(uint8_t *rawImg, uint8_t **compressedImg, unsigned long *compressedImgSize, uint8_t compressedImgQuality, ImageState imageState)
 {
-	struct jpeg_compress_struct cinfo;
-	struct jpeg_error_mgr jerr;
 	JSAMPROW row_pointer[1];
 
-	setupEncodeJPEG(compressedImg, compressedImgSize, compressedImgQuality, imageState, cinfo, jerr);
+	setupEncodeJPEG(compressedImg, compressedImgSize, compressedImgQuality, imageState);
 
-	while (cinfo.next_scanline < cinfo.image_height)
+	while (m_cinfo_comp.next_scanline < m_cinfo_comp.image_height)
 	{
-		row_pointer[0] = &rawImg[cinfo.next_scanline * cinfo.image_width];
-		jpeg_write_scanlines(&cinfo, row_pointer, 1);
+		row_pointer[0] = &rawImg[m_cinfo_comp.next_scanline * m_cinfo_comp.image_width];
+		jpeg_write_scanlines(&m_cinfo_comp, row_pointer, 1);
 	}
 
-	jpeg_finish_compress( &cinfo );
-	jpeg_destroy_compress( &cinfo );
+	jpeg_finish_compress( &m_cinfo_comp );
 	delete[] rawImg;
 }
 }

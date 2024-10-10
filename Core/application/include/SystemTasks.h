@@ -4,9 +4,12 @@
 #include "business_logic/ClockSyncronization/SharedClockSlaveManager.h"
 #include "business_logic/DataHandling/ImageCapturer/ImageCapturer.h"
 #include "business_logic/DataSerializer/IDataSerializer.h"
+#include "business_logic/Communication/CanFrame.h"
+
 #include "main.h"
 #include "cmsis_os.h"
 #include <memory>
+#include <vector>
 
 namespace application
 {
@@ -36,6 +39,7 @@ public:
     void createPoolTasks(const std::shared_ptr<business_logic::Communication::CommunicationManager>& commMng, const std::shared_ptr<business_logic::DataHandling::ImageCapturer>& imageCapturer, const std::shared_ptr<business_logic::ClockSyncronization::SharedClockSlaveManager>& sharedClkMng);
     static void getNextImage(business_logic::DataSerializer::ImageSnapshot& edgesSnapshot);
     static bool isPendingData();
+    static void splitCborToCanMsgs(uint8_t canMsgId, const std::vector<uint8_t>& cborSerializedChunk, std::vector<business_logic::Communication::CanMsg>& canMsgChunks);
 };
 
 }
