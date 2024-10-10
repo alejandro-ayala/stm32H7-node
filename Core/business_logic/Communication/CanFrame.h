@@ -1,4 +1,4 @@
-
+#pragma once
 
 namespace business_logic
 {
@@ -31,6 +31,13 @@ typedef struct CanFrame {
    // Some additional information has not yet been encapsulated here
    // (ex:priority bits), primarily, no TXBxCTRL bits
 } CanFrame;
+
+typedef struct CanMsg
+{
+	uint8_t canMsgId;
+	uint8_t canMsgIndex;
+	uint8_t payload[MAXIMUM_CAN_MSG_SIZE - ID_FIELD_SIZE];
+} CanMsg;
 
 }  // namespace Communication
 }

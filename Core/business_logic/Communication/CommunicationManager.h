@@ -5,6 +5,8 @@
 #include "../../hardware_abstraction/Controllers/CAN/CanController.h"
 #include "../ClockSyncronization/TimeStamp.h"
 #include "../ClockSyncronization/TimeController.h"
+#include "business_logic/Communication/CanFrame.h"
+
 #include <memory>
 namespace business_logic
 {
@@ -21,7 +23,7 @@ public:
 	virtual ~CommunicationManager();
 
 	void initialization();
-	void sendData(const std::vector<uint8_t>& msg);
+	void sendData(const std::vector<business_logic::Communication::CanMsg>& dataToSend);
 	void receiveData(void);
 	bool selfTest();
 

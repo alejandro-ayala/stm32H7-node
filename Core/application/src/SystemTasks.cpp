@@ -60,8 +60,10 @@ void SystemTasks::edgeDetection(void* argument)
 
 		auto edgesPtr = edges->data();
 		const auto edgeCompressedImgSize = imageCapturer->processEdges(rawImgBuffer, edgesPtr, bufferSize);
-
-		business_logic::DataSerializer::ImageSnapshot edgesSnapshot{0xE3, 0x00, edgesPtr, edgeCompressedImgSize, captureTimestamp};
+		static uint8_t captureId = 0;
+		business_logic::DataSerializer::ImageSnapshot edgesSnapshot{captureId, 0x00, edgesPtr, edgeCompressedImgSize, captureTimestamp};
+		captureId++;
+		if(captureId == 4) captureId = 0;
 		const auto isInserted = m_capturesQueue->sendToBack(( void * ) &edgesSnapshot);
 		if(!isInserted)
 		{
@@ -88,16 +90,19 @@ void SystemTasks::sendData(void* argument)
 			getNextImage(nextSnapshot);
 			for(size_t i = 0; i < (nextSnapshot.m_imgSize / MAXIMUN_CBOR_BUFFER_SIZE); i++)
 		    {
-				business_logic::DataSerializer::ImageSnapshot msg{nextSnapshot.m_msgId, i, nextSnapshot.m_imgBuffer + (i*MAXIMUN_CBOR_BUFFER_SIZE), MAXIMUN_CBOR_BUFFER_SIZE, nextSnapshot.m_timestamp};
-		    	std::vector<uint8_t> serializeMsg;
-		        m_dataSerializer->serialize(msg, serializeMsg);
-		        const auto ptrSerializedMsg = serializeMsg.data();
-		        const auto serializedMsgSize = serializeMsg.size();
-		        if(serializedMsgSize > 64)
+				business_logic::DataSerializer::ImageSnapshot cborImgChunk{nextSnapshot.m_msgId, i, nextSnapshot.m_imgBuffer + (i*MAXIMUN_CBOR_BUFFER_SIZE), MAXIMUN_CBOR_BUFFER_SIZE, nextSnapshot.m_timestamp};
+		    	std::vector<uint8_t> cborSerializedChunk;
+		        m_dataSerializer->serialize(cborImgChunk, cborSerializedChunk);
+		        const auto ptrSerializedMsg = cborSerializedChunk.data();
+		        const auto serializedMsgSize = cborSerializedChunk.size();
+		        if(serializedMsgSize > MAXIMUM_CAN_MSG_SIZE)
 		        {
-		        	std::cout << "FD_CAN buffer overflow" << std::endl;
+		        	std::cout << "Maximum CAN frame size" << std::endl;
 		        }
-				commMng->sendData(serializeMsg);
+		        std::vector<business_logic::Communication::CanMsg> canMsgChunks;
+		        const auto cborIndex = (nextSnapshot.m_msgId << 6) | (i & 0x3F);
+		        splitCborToCanMsgs(cborIndex, cborSerializedChunk, canMsgChunks);
+				commMng->sendData(canMsgChunks);
 		    }
 		}
 
@@ -131,4 +136,35 @@ void SystemTasks::getNextImage(business_logic::DataSerializer::ImageSnapshot& ed
 {
 	m_capturesQueue->receive(&edgesSnapshot);
 }
+
+void SystemTasks::splitCborToCanMsgs(uint8_t canMsgId, const std::vector<uint8_t>& cborSerializedChunk, std::vector<business_logic::Communication::CanMsg>& canMsgChunks)
+{
+    size_t totalBytes = cborSerializedChunk.size();
+    size_t payloadSize = MAXIMUM_CAN_MSG_SIZE - 2;
+    size_t numberOfMsgs = (totalBytes + payloadSize - 1) / payloadSize;
+
+    for (size_t i = 0; i < numberOfMsgs; ++i)
+    {
+        business_logic::Communication::CanMsg canMsg;
+
+        canMsg.canMsgId =canMsgId;
+        canMsg.canMsgIndex = static_cast<uint8_t>(i);
+
+        size_t startIdx = i * payloadSize;
+        size_t endIdx = std::min(startIdx + payloadSize, totalBytes);
+
+        for (size_t j = startIdx; j < endIdx; ++j)
+        {
+            canMsg.payload[j - startIdx] = cborSerializedChunk[j];
+        }
+
+        for (size_t j = endIdx - startIdx; j < payloadSize; ++j)
+        {
+            canMsg.payload[j] = 0;
+        }
+
+        canMsgChunks.push_back(canMsg);
+    }
+}
+
 }
