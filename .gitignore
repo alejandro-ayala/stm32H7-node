@@ -42,3 +42,6 @@ build/
 # Executables
 *.exe
 *.out
+
+#Python virtual env
+Scripts/virtual_env
