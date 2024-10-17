@@ -1,0 +1,1 @@
+dump ihex memory mem_dump.hex 0x20000000 0x20000080
