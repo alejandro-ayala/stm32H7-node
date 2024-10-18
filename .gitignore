@@ -43,5 +43,7 @@ build/
 *.exe
 *.out
 
-#Python virtual env
+#Python virtual env and resources
 Scripts/virtual_env
+*/Resources/memory_dump
+**/*.jpeg

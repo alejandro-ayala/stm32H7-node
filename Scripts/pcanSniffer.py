@@ -3,7 +3,7 @@ from collections import defaultdict
 import re
 import cbor2
 from typing import List, Dict, Tuple
-
+import os
 # Definición de clases y tipos
 ImageID = int
 CborID = int
@@ -152,7 +152,6 @@ def read_can_messages(channel, output_file):
             for key, tramas in ordered_tramas.items():
                 image_id, cbor_id = key
                 print(f"\nImagen ID: {image_id}, Cbor ID: {cbor_id}")
-                
                 concatenated_tramas = ''.join(trama.hex() for trama in tramas)
                 #print(f"  Tramas concatenadas: {concatenated_tramas}")
                 
@@ -164,8 +163,17 @@ def read_can_messages(channel, output_file):
 
                 # Imprimir los campos
                 #snapshot.print_fields()
-                print(' '.join(f"{byte:02X}" for byte in snapshot.img_buffer))
                 
+                cbor_frame = ' '.join(f"{byte:02X}" for byte in snapshot.img_buffer)
+                print(cbor_frame)
+                output_directory = 'Resources/memory_dump'
+                
+                os.makedirs(output_directory, exist_ok=True)
+                filename = "Cbor" + str(cbor_id) + ".txt"
+                fullpath_filename = os.path.join(output_directory, filename)
+                
+                with open(fullpath_filename, 'w') as file:
+                    file.write(cbor_frame)
                 
                 #guardar la imagen 
                 

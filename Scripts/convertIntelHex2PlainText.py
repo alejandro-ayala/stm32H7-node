@@ -1,4 +1,5 @@
 import sys
+import os
 
 def hex_to_plain_text(hex_file, output_file):
     with open(hex_file, 'r') as infile, open(output_file, 'w') as outfile:
@@ -7,8 +8,7 @@ def hex_to_plain_text(hex_file, output_file):
             if line.startswith(':'):
                 # Obtener la longitud de los datos y la dirección
                 length = int(line[1:3], 16)
-                # type = int(line[7:9], 16)  # No necesitamos el tipo aquí
-
+                
                 # Solo procesar registros de datos
                 if int(line[7:9], 16) == 0:
                     # Extraer los datos
@@ -19,17 +19,25 @@ def hex_to_plain_text(hex_file, output_file):
                         outfile.write(f"{byte} ")
                     #outfile.write("\n")  # Nueva línea después de cada línea de datos
 
+def convert_files_in_directory(directory):
+    for filename in os.listdir(directory):
+        if filename.endswith('.hex'):
+            hex_file_path = os.path.join(directory, filename)
+            output_file_path = os.path.join(directory, filename[:-4] + '.txt')  # Cambiar .hex a .txt
+            
+            hex_to_plain_text(hex_file_path, output_file_path)
+            print(f"Convertido: {hex_file_path} -> {output_file_path}")
+
 if __name__ == '__main__':
-    if len(sys.argv) != 3:
-        print("Uso: python convert_hex_to_plain.py archivo_hex archivo_salida")
+    if len(sys.argv) != 2:
+        print("Uso: python convert_hex_to_plain.py directorio_con_archivos_hex")
         sys.exit(1)
 
-    input_hex_file = sys.argv[1]
-    output_plain_file = sys.argv[2]
+    input_directory = sys.argv[1]
 
-    try:
-        hex_to_plain_text(input_hex_file, output_plain_file)
-        print(f"Conversión completada. Salida en: {output_plain_file}")
-    except FileNotFoundError:
-        print(f"El archivo {input_hex_file} no existe.")
+    if not os.path.isdir(input_directory):
+        print(f"El directorio {input_directory} no existe o no es un directorio válido.")
         sys.exit(1)
+
+    convert_files_in_directory(input_directory)
+    print("Conversión completada para todos los archivos .hex en el directorio.")
