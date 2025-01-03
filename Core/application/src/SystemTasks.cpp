@@ -6,6 +6,7 @@
 
 namespace application
 {
+
 SystemTasks::SystemTasks(const std::shared_ptr<business_logic::Communication::CommunicationManager>& commMng, const std::shared_ptr<business_logic::DataHandling::ImageCapturer>& imageCapturer, const std::shared_ptr<business_logic::ClockSyncronization::SharedClockSlaveManager>& sharedClkMng)
 {
 	uint32_t queueItemSize   = sizeof(business_logic::DataSerializer::ImageSnapshot);
@@ -91,7 +92,8 @@ void SystemTasks::sendData(void* argument)
 			for(size_t i = 0; i < (nextSnapshot.m_imgSize / MAXIMUN_CBOR_BUFFER_SIZE); i++)
 		    {
 				business_logic::DataSerializer::ImageSnapshot cborImgChunk{nextSnapshot.m_msgId, i, nextSnapshot.m_imgBuffer + (i*MAXIMUN_CBOR_BUFFER_SIZE), MAXIMUN_CBOR_BUFFER_SIZE, nextSnapshot.m_timestamp};
-		    	std::vector<uint8_t> cborSerializedChunk;
+		    	const auto ptrImgChunkBuffer = cborImgChunk.m_imgBuffer;
+				std::vector<uint8_t> cborSerializedChunk;
 		        m_dataSerializer->serialize(cborImgChunk, cborSerializedChunk);
 		        const auto ptrSerializedMsg = cborSerializedChunk.data();
 		        const auto serializedMsgSize = cborSerializedChunk.size();
@@ -102,7 +104,7 @@ void SystemTasks::sendData(void* argument)
 		        std::vector<business_logic::Communication::CanMsg> canMsgChunks;
 		        const auto cborIndex = (nextSnapshot.m_msgId << 6) | (i & 0x3F);
 		        splitCborToCanMsgs(cborIndex, cborSerializedChunk, canMsgChunks);
-				commMng->sendData(canMsgChunks);
+				//commMng->sendData(canMsgChunks);
 		    }
 		}
 
@@ -149,20 +151,14 @@ void SystemTasks::splitCborToCanMsgs(uint8_t canMsgId, const std::vector<uint8_t
 
         canMsg.canMsgId =canMsgId;
         canMsg.canMsgIndex = static_cast<uint8_t>(i);
-
         size_t startIdx = i * payloadSize;
         size_t endIdx = std::min(startIdx + payloadSize, totalBytes);
+        canMsg.payloadSize = endIdx - startIdx;
 
         for (size_t j = startIdx; j < endIdx; ++j)
         {
             canMsg.payload[j - startIdx] = cborSerializedChunk[j];
         }
-
-        for (size_t j = endIdx - startIdx; j < payloadSize; ++j)
-        {
-            canMsg.payload[j] = 0;
-        }
-
         canMsgChunks.push_back(canMsg);
     }
 }
