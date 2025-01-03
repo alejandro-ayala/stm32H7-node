@@ -71,14 +71,15 @@ void CanController::initialize()
 	  /* USER CODE END FDCAN1_Init 0*/
 }
 
-int CanController::transmitMsg(uint8_t idMsg, const uint8_t *txMsg)
+int CanController::transmitMsg(uint8_t idMsg, const uint8_t *txMsg, uint8_t dataSize)
 {
 //    HAL_FDCAN_DeInit(&hfdcan1);
 //    initialize();
 	txHeader.Identifier = idMsg;
 	txHeader.IdType = FDCAN_STANDARD_ID;
 	txHeader.TxFrameType = FDCAN_DATA_FRAME;
-	txHeader.DataLength = FDCAN_DLC_BYTES_64;
+	//TODO review DataLenght size control!
+	txHeader.DataLength = dataSize;//FDCAN_DLC_BYTES_64;
 	txHeader.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
 	txHeader.BitRateSwitch = FDCAN_BRS_OFF;
 	txHeader.FDFormat = FDCAN_CLASSIC_CAN;

@@ -164,19 +164,28 @@ def read_can_messages(channel, output_file):
                 # Imprimir los campos
                 #snapshot.print_fields()
                 
-                cbor_frame = ' '.join(f"{byte:02X}" for byte in snapshot.img_buffer)
-                print(cbor_frame)
                 output_directory = 'Resources/memory_dump'
                 
                 os.makedirs(output_directory, exist_ok=True)
-                filename = "Cbor" + str(cbor_id) + ".txt"
-                fullpath_filename = os.path.join(output_directory, filename)
+
+                #guardar Cbor frame
+                cbor_frame = ' '.join(f"{byte:02X}" for byte in bytes.fromhex(concatenated_tramas))
+                print("Cbor Frame: ")
+                print(cbor_frame)
+                print("Concatenated Tramas: ")
+                print(concatenated_tramas)
+                cbor_frame_filename = "CborFrame" + str(cbor_id) + ".txt"
+                cbor_frame_fullpath_filename = os.path.join(output_directory, cbor_frame_filename)
                 
-                with open(fullpath_filename, 'w') as file:
+                with open(cbor_frame_fullpath_filename, 'w') as file:
                     file.write(cbor_frame)
-                
-                #guardar la imagen 
-                
+
+                #guardar la imagen
+                jpeg_frame = ' '.join(f"{byte:02X}" for byte in snapshot.img_buffer)
+                jpeg_frame_filename = "JpegFrame" + str(cbor_id) + ".txt"
+                jpeg_frame_fullpath_filename = os.path.join(output_directory, jpeg_frame_filename)  
+                with open(jpeg_frame_fullpath_filename, 'w') as file:
+                    file.write(jpeg_frame)              
                 #hex_string = ' '.join(f"{byte:02X}" for byte in snapshot.img_buffer)
                 # Escribir en el archivo y añadir una nueva línea
                 #file.write(hex_string)
@@ -185,6 +194,38 @@ def read_can_messages(channel, output_file):
             bus.shutdown()  # Cerrar la conexión al bus CAN
 
 if __name__ == "__main__":
+
+    # inputData = "FFD8FFE000104A46494600010100000100010000FFDB0043002016181C1814201C1A1C24222026305034302C2C3062464A3A5074667A787266706E8090B89C8088AE8A6E70A0DAA2AEBEC4CED0CE7C9AE2F2E0C8F0B8CACEC6FFC0000B0800F0014001011100FFC4001F00000105010101010101000000000000000001020304"
+    # data = {
+    #     'msgId': 0,
+    #     'imgSize': 128,
+    #     'imgBuffer': bytes.fromhex(inputData),
+    #     'timestamp': 3134876076
+    # }
+    # dataSerialized = cbor2.dumps(data)
+    # print(dataSerialized.hex())
+    # print("\n")
+# 
+    # inputData2 = "0010180600044A1846184918060005460001010000060006010001000018060007FF18DB00184306696D6753980000000000A469696D67420600017566666572980600028018FF18D818060003FF18E00010180600044A1846184918060005460001010000060006010001000018060007FF18DB001843060008001820161818"
+    # data2 = {
+    #     'msgId': 1,
+    #     'imgSize': 128,
+    #     'imgBuffer': bytes.fromhex(inputData2),
+    #     'timestamp': 3134876076
+    # }
+    # dataSerialized2 = cbor2.dumps(data2)
+    # print(dataSerialized2.hex())
+    # print("\n")
+# 
+    # inputData3 = "1867184206000601070000181C000006010800000018A418060109691869186D1806010A67184206000106010B18751866186606010C18651872189806010D06000000000006010E00182C00000006010F18FC18FF18FF06011018FF000018A406011118691869186D0601121867184206000601130118751866180601146618"
+    # data3 = {
+    #     'msgId': 2,
+    #     'imgSize': 128,
+    #     'imgBuffer': bytes.fromhex(inputData3),
+    #     'timestamp': 3134876076
+    # }
+    # dataSerialized3 = cbor2.dumps(data3)
+    # print(dataSerialized3.hex())
     # Aquí puedes especificar el canal, como 'PCAN_USBBUS1'
     channel = 'PCAN_USBBUS1'  # Asegúrate de cambiar esto si tu bus es diferente
     output_file = 'image.jpeg'  # Nombre del archivo donde almacenar los mensajes

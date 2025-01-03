@@ -33,11 +33,12 @@ void CommunicationManager::sendData(const std::vector<business_logic::Communicat
         uint8_t data[MAXIMUM_CAN_MSG_SIZE] = {0};
         data[0] = frame.canMsgId;
         data[1] = frame.canMsgIndex;
+        uint8_t dataSize = ID_FIELD_SIZE + frame.payloadSize;
         for (uint8_t i = ID_FIELD_SIZE; i < MAXIMUM_CAN_MSG_SIZE; i++)
         {
             data[i] = frame.payload[i - ID_FIELD_SIZE];
         }
-        canController->transmitMsg(static_cast<uint8_t>(CAN_IDs::IMAGE_DATA), data);
+        canController->transmitMsg(static_cast<uint8_t>(CAN_IDs::IMAGE_DATA), data, dataSize);
         //TODO check and remove the delay
         HAL_Delay(2);
     }
