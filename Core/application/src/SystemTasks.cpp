@@ -104,7 +104,7 @@ void SystemTasks::sendData(void* argument)
 		        std::vector<business_logic::Communication::CanMsg> canMsgChunks;
 		        const auto cborIndex = (nextSnapshot.m_msgId << 6) | (i & 0x3F);
 		        splitCborToCanMsgs(cborIndex, cborSerializedChunk, canMsgChunks);
-				//commMng->sendData(canMsgChunks);
+				commMng->sendData(canMsgChunks);
 		    }
 		}
 

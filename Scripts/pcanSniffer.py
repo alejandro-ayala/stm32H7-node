@@ -185,7 +185,7 @@ def read_can_messages(channel, output_file):
                 jpeg_frame_filename = "JpegFrame" + str(cbor_id) + ".txt"
                 jpeg_frame_fullpath_filename = os.path.join(output_directory, jpeg_frame_filename)  
                 with open(jpeg_frame_fullpath_filename, 'w') as file:
-                    file.write(jpeg_frame)              
+                    file.write(jpeg_frame)         
                 #hex_string = ' '.join(f"{byte:02X}" for byte in snapshot.img_buffer)
                 # Escribir en el archivo y añadir una nueva línea
                 #file.write(hex_string)
