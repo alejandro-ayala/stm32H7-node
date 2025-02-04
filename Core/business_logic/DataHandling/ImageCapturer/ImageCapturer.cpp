@@ -7,6 +7,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "external/stb/stb_image.h"
 #include <cstring>
+#include "services/Logger/LoggerMacros.h"
 
 #define FLOAT_ENABLE
 
@@ -21,7 +22,7 @@ ImageCapturer::ImageCapturer(const std::shared_ptr<hardware_abstraction::Devices
 	m_pic   = new uint8_t[m_imageConfig.imageWidth * m_imageConfig.imageHeight];
 	if(m_pic == nullptr)
 	{
-		std::cout << "Memory allocation for m_pic failed" << std::endl;
+		LOG_FATAL("Memory allocation for m_pic failed");
 		THROW_BUSINESS_LOGIC_EXCEPTION(services::BusinessLogicErrorId::MemoryAllocationFailed, "Memory allocation for m_pic failed");
 	}
 
@@ -109,8 +110,7 @@ unsigned long ImageCapturer::processEdges(const  uint8_t* image, uint8_t*& edges
 
 	unsigned long compressedSize = 0;
 	m_imageCompressor->compress(m_pic, &edges, &compressedSize, m_imageConfig.imageQuality, m_imageState);
-	std::cout << " Compressed edges image with" << std::endl;
-
+	LOG_DEBUG("Compressed edges image with");
 //	business_logic::DataSerializer::ImageSnapshot edgesSnapshot2;
 //	business_logic::DataSerializer::ImageSnapshot *pxPointerToxMessage = nullptr;
 //	m_capturesQueue->receive(&pxPointerToxMessage);

@@ -1,4 +1,5 @@
 #include "SobelEdgeDetectorAlgorithm.h"
+#include "services/Logger/LoggerMacros.h"
 
 namespace business_logic
 {
@@ -150,7 +151,7 @@ float32_t SobelEdgeDetectorAlgorithm::applyKernel(float32_t *dspKernel, float32_
 
 void SobelEdgeDetectorAlgorithm::process(const uint8_t* rawImage, uint8_t* edges, size_t size)
 {
-    std::cout << "SobelEdgeDetectorAlgorithm executed for image of size:" << std::to_string(size) << std::endl;
+	LOG_DEBUG("SobelEdgeDetectorAlgorithm executed for image of size: ", size);
     sobelGradient(rawImage, edges);
 }
 

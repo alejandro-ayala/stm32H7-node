@@ -11,7 +11,7 @@ Logger& Logger::Instance()
 	return instance;
 }
 
-Logger::Logger() : ILogger(), m_logLevel(LogLevel::Debug), m_disable(false)
+Logger::Logger() : ILogger(), m_logLevel(LogLevel::Info), m_disable(false)
 {
 	initialize();
 }
@@ -20,14 +20,35 @@ void Logger::initialize()
 {
 
 	UART_HandleTypeDef sinkCff;
-	sinkCff.Instance          = USART1;
-	sinkCff.Init.BaudRate     = 115200;
-	sinkCff.Init.WordLength   = UART_WORDLENGTH_8B;
-	sinkCff.Init.StopBits     = UART_STOPBITS_1;
-	sinkCff.Init.Parity       = UART_PARITY_NONE;
-	sinkCff.Init.HwFlowCtl    = UART_HWCONTROL_NONE;
-	sinkCff.Init.Mode         = UART_MODE_TX_RX;
+
+	sinkCff.Instance = USART3;
+	sinkCff.Init.BaudRate = 115200;
+	sinkCff.Init.WordLength = UART_WORDLENGTH_8B;
+	sinkCff.Init.StopBits = UART_STOPBITS_1;
+	sinkCff.Init.Parity = UART_PARITY_NONE;
+	sinkCff.Init.Mode = UART_MODE_TX_RX;
+	sinkCff.Init.HwFlowCtl = UART_HWCONTROL_NONE;
 	sinkCff.Init.OverSampling = UART_OVERSAMPLING_16;
+	sinkCff.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+	sinkCff.Init.ClockPrescaler = UART_PRESCALER_DIV1;
+	sinkCff.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+	int error = 0;
+	if (HAL_UART_Init(&sinkCff) != HAL_OK)
+	{
+		error++;
+	}
+	if (HAL_UARTEx_SetTxFifoThreshold(&sinkCff, UART_TXFIFO_THRESHOLD_1_8) != HAL_OK)
+	{
+		error++;
+	}
+	if (HAL_UARTEx_SetRxFifoThreshold(&sinkCff, UART_RXFIFO_THRESHOLD_1_8) != HAL_OK)
+	{
+		error++;
+	}
+	if (HAL_UARTEx_DisableFifoMode(&sinkCff) != HAL_OK)
+	{
+		error++;
+	}
 
 	outSink = std::make_unique<hardware_abstraction::Controllers::UARTController>(hardware_abstraction::Controllers::UARTController(&sinkCff));
 	outSink->initialize();

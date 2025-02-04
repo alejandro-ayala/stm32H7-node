@@ -1,8 +1,7 @@
 
 #include "CommunicationManager.h"
 #include "CanIDs.h"
-#include <iostream>
-
+#include "services/Logger/LoggerMacros.h"
 #include "../../hardware_abstraction/Controllers/CAN/CanController.h"
 
 namespace business_logic
@@ -38,6 +37,26 @@ void CommunicationManager::sendData(const std::vector<business_logic::Communicat
         {
             data[i] = frame.payload[i - ID_FIELD_SIZE];
         }
+
+/*******/
+        std::ostringstream messageStream;
+        messageStream << "CAN Message: ";
+        messageStream << "ID=" << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(frame.canMsgId) << ", ";
+        messageStream << "Index=" << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(frame.canMsgIndex) << ", ";
+        messageStream << "Payload=[";
+        for (uint8_t i = 0; i < frame.payloadSize; i++)
+        {
+            if (i > 0)
+                messageStream << " ";
+            messageStream << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(frame.payload[i]);
+        }
+        messageStream << "]";
+
+        // Convertir el stream a std::string
+        std::string canMessage = messageStream.str();
+        LOG_INFO(canMessage);
+
+ /*******/
         canController->transmitMsg(static_cast<uint8_t>(CAN_IDs::IMAGE_DATA), data, dataSize);
         //TODO check and remove the delay
         HAL_Delay(2);
@@ -52,10 +71,10 @@ void CommunicationManager::receiveData()
 
 	if(msgSize > 0)
 	{
-		//xil_printf("\n\rReceived data: %d bytes", msgSize);
+		LOG_DEBUG("Received data:", msgSize, " bytes");
 //		IData parsedMsg;
 //		parsedMsg.deSerialize(data);
-//		std::cout << "newData[" << parsedMsg.secCounter << "]. sec: " << parsedMsg.timestamp << std::endl;
+		//LOG_DEBUG("newData[", parsedMsg.secCounter, " sec: ", parsedMsg.timestamp);
 	}
 }
 
