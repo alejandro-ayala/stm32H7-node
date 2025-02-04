@@ -1,4 +1,5 @@
 #include "EdgeDetector.h"
+#include "services/Logger/LoggerMacros.h"
 
 namespace business_logic
 {
@@ -15,7 +16,7 @@ EdgeDetector::EdgeDetector(const std::shared_ptr<SobelEdgeDetectorAlgorithm> &de
 //        //const auto img = m_fileHandler->loadImage(fullFileName.c_str());
 //        //const auto processedImg = processImage(img);
 //        const std::string processedFileName = "resources/" + fileName.first + ".png";
-//        std::cout << "Storing file: " << processedFileName << std::endl;
+		  //LOG_DEBUG("Storing file:", processedFileName);
 //
 //        //m_fileHandler->writeImage(processedImg, processedFileName.c_str());
 //    }

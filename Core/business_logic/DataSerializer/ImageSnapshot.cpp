@@ -10,12 +10,13 @@ ImageSnapshot::ImageSnapshot(uint8_t msgId, uint8_t msgIndex, uint8_t* msgBuffer
 {
 	this->m_imgBuffer = new uint8_t[imgSize];
 	BUSINESS_LOGIC_ASSERT( m_imgBuffer != nullptr, services::BusinessLogicErrorId::MemoryAllocationFailed, "Can not allocate memory for image snapshot msg");
-	std::copy(msgBuffer + imgSize*msgIndex, (msgBuffer + imgSize*msgIndex) + imgSize, this->m_imgBuffer);
+	//std::copy(msgBuffer + imgSize*msgIndex, (msgBuffer + imgSize*msgIndex) + imgSize, this->m_imgBuffer);
+	std::copy(msgBuffer, (msgBuffer + imgSize), this->m_imgBuffer);
 }
 
 ImageSnapshot::~ImageSnapshot()
 {
-	delete[] this->m_imgBuffer;
+	//delete[] this->m_imgBuffer;
 }
 
 void ImageSnapshot::serialize(std::vector<uint8_t>& serializeData) const

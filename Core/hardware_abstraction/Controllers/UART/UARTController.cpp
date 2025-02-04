@@ -7,7 +7,7 @@ namespace hardware_abstraction
 namespace Controllers
 {
 
-UARTController::UARTController(const UART_HandleTypeDef* uartCfg) : ICommunication("UARTController"), uartHandle(*uartCfg), blockingTime(500)
+UARTController::UARTController(const UART_HandleTypeDef* uartCfg) : ICommunication("UARTController"), uartHandle(*uartCfg), blockingTime(5000)
 {
 
 }

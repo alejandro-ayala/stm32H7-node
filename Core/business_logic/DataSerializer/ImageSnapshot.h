@@ -39,7 +39,7 @@ private:
         {
             try
             {
-                std::vector<uint8_t> imgBufferVector(image.m_imgBuffer + MAXIMUN_CBOR_BUFFER_SIZE*image.m_msgIndex, (image.m_imgBuffer + MAXIMUN_CBOR_BUFFER_SIZE*image.m_msgIndex) + MAXIMUN_CBOR_BUFFER_SIZE);
+                std::vector<uint8_t> imgBufferVector(image.m_imgBuffer, image.m_imgBuffer + image.m_imgSize);
                 j = nlohmann::json{{"msgId", image.m_msgId}, {"imgSize", image.m_imgSize},
                                    {"imgBuffer", imgBufferVector}, {"timestamp", image.m_timestamp}};
             } catch (const std::exception& e) {

@@ -4,6 +4,8 @@ import re
 import cbor2
 from typing import List, Dict, Tuple
 import os
+from PIL import Image
+import cv2
 # Definición de clases y tipos
 ImageID = int
 CborID = int
@@ -113,6 +115,47 @@ class CBORAssembler:
         self.tramas.clear()
         print("Todas las tramas han sido eliminadas.")
 
+def reconstruct_and_view_jpeg(output_directory, final_image_filename="FullJpegImage.jpg"):
+    """
+    Lee fragmentos de imágenes JPEG almacenados en archivos, los concatena y guarda la imagen completa.
+    Luego, la visualiza usando PIL (Pillow) y OpenCV.
+    
+    Parámetros:
+        output_directory (str): Ruta donde están los fragmentos.
+        final_image_filename (str): Nombre del archivo final.
+    """
+    # Obtener todos los fragmentos JPEG en orden
+    fragment_files = sorted(
+        [f for f in os.listdir(output_directory) if f.startswith("JpegFrame") and f.endswith(".txt")],
+        key=lambda x: int(x.replace("JpegFrame", "").replace(".txt", ""))
+    )
+
+    # Nombre del archivo final
+    final_image_fullpath = os.path.join(output_directory, final_image_filename)
+
+    # Concatenar los fragmentos y escribir la imagen reconstruida en binario
+    with open(final_image_fullpath, 'wb') as full_image:
+        for fragment in fragment_files:
+            fragment_path = os.path.join(output_directory, fragment)
+
+            # Leer el contenido en hexadecimal y convertirlo a binario
+            with open(fragment_path, 'r') as file:
+                hex_data = file.read().replace(" ", "")  # Eliminar espacios
+                binary_data = bytes.fromhex(hex_data)
+                full_image.write(binary_data)  # Escribir en el archivo final
+
+    print(f"Imagen reconstruida guardada en: {final_image_fullpath}")
+
+    # Mostrar la imagen con PIL
+    img = Image.open(final_image_fullpath)
+    img.show()
+
+    # Mostrar la imagen con OpenCV
+    img_cv2 = cv2.imread(final_image_fullpath)
+    cv2.imshow("Imagen Completa", img_cv2)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    
 def read_can_messages(channel, output_file):
     """Lee mensajes CAN desde el canal especificado y los almacena en un archivo."""
     # Configurar la conexión con la PCAN-USB a 125 kbit/s usando 'interface'
@@ -189,10 +232,11 @@ def read_can_messages(channel, output_file):
                 #hex_string = ' '.join(f"{byte:02X}" for byte in snapshot.img_buffer)
                 # Escribir en el archivo y añadir una nueva línea
                 #file.write(hex_string)
+            reconstruct_and_view_jpeg(output_directory)
 
         finally:
             bus.shutdown()  # Cerrar la conexión al bus CAN
-
+    
 if __name__ == "__main__":
 
     # inputData = "FFD8FFE000104A46494600010100000100010000FFDB0043002016181C1814201C1A1C24222026305034302C2C3062464A3A5074667A787266706E8090B89C8088AE8A6E70A0DAA2AEBEC4CED0CE7C9AE2F2E0C8F0B8CACEC6FFC0000B0800F0014001011100FFC4001F00000105010101010101000000000000000001020304"

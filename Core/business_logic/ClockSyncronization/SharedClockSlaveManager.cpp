@@ -3,6 +3,7 @@
 #include "../ClockSyncronization/SharedClockSlaveManager.h"
 #include "../Communication/CanIDs.h"
 #include "CanSyncMessages.h"
+#include "services/Logger/LoggerMacros.h"
 
 namespace business_logic
 {
@@ -67,17 +68,17 @@ bool SharedClockSlaveManager::getGlobalTime()
 
 			uint64_t currentGT = timeController->getLocalTime();
 			uint64_t newGT = (globalTimeStamp.seconds * 1e9) + globalTimeStamp.nanoseconds;
-			std::cout << "newGT: " << newGT << "currentGT: " << currentGT <<std::endl;
+			LOG_DEBUG("SharedClockSlaveManager::getGlobalTime: newGT: ",newGT, " currentGT:", currentGT );
 
 			timeController->setGlobalTimeReference(globalTimeStamp);
 			updatedTime = true;
 		}
 		else
 		{
-			std::cout << "Wrong MSG: size = " << msgSize <<std::endl;
+			LOG_WARNING("Wrong MSG: size = ", msgSize);
 			for(int i=0;i<msgSize;i++)
 			{
-				std::cout << data[i] << ",";
+				LOG_WARNING(data[i], ",");
 			}
 			updatedTime = false;
 		}

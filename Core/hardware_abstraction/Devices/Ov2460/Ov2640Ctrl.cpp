@@ -1,6 +1,6 @@
 #include "ov2640Config.h"
 #include "Ov2640Ctrl.h"
-#include <iostream>
+#include "services/Logger/LoggerMacros.h"
 #include <stdio.h>
 #include <string.h>
 #include <vector>
@@ -42,7 +42,7 @@ void Ov2640Ctrl::initialization()
 	uint8_t ver;
 	m_i2cControl->receive(0x0a, &pid);  // pid value is 0x26
 	m_i2cControl->receive(0x0b, &ver);  // ver value is 0x42
-	std::cout << "Camera PID:" << pid << " version: " << ver << std::endl;
+	LOG_INFO("Ov2640Ctrl::initialization: Camera PID:", std::to_string(pid), " VERSION: ", std::to_string(ver));
 
 	// Stop DCMI clear buffer
 	stopCapture();
@@ -54,13 +54,13 @@ void Ov2640Ctrl::setRegistersConfiguration(const std::vector<std::pair<uint8_t, 
 	for(const auto& [regAddr, regVal] : registerCfg)
 	{
 		m_i2cControl->send(regAddr, regVal);
-		std::cout << "SCCB write register: " << std::to_string(regAddr) << std::to_string(regVal) << std::endl;
+		LOG_DEBUG("Ov2640Ctrl::setRegistersConfiguration: Register:", regAddr, " = ", regVal);
 		HAL_Delay(10);
 		uint8_t newRegVal;
 		m_i2cControl->receive(regAddr, &newRegVal);
 		if (regVal != newRegVal)
 		{
-			std::cout << "SCCB write failure: " << std::to_string(regAddr) << std::to_string(regVal) << std::endl;
+			LOG_DEBUG("Ov2640Ctrl::setRegistersConfiguration: write failure Register:", regAddr, " = ", regVal);
 		}
 	}
 }
@@ -89,7 +89,7 @@ void Ov2640Ctrl::captureSnapshot()
 
 
 	const auto imgSize = processCapture();
-	std::cout << "Image size:" << std::to_string(imgSize) << " bytes" << std::endl;
+	LOG_INFO("Image size:", imgSize, " bytes");
 }
 
 uint32_t Ov2640Ctrl::processCapture()
@@ -103,26 +103,25 @@ uint32_t Ov2640Ctrl::processCapture()
 				&& m_frameBuffer[bufferPointer + 1] == 0xD8)
 		{
 			headerFound = true;
-			std::cout << "Found header of JPEG file" << std::endl;
+			LOG_INFO("Found header of JPEG file");
 		}
 		if (headerFound && m_frameBuffer[bufferPointer] == 0xFF
 				&& m_frameBuffer[bufferPointer + 1] == 0xD9)
 		{
 			bufferPointer = bufferPointer + 2;
-			std::cout << "Found EOI of JPEG file" << std::endl;
+			LOG_INFO("Found EOI of JPEG file");
 			headerFound = false;
 
 			break;
 		}
 		if (bufferPointer >= maxBufferSize)
 		{
-			std::cout << "Excedded maximum buffer size" << std::endl;
+			LOG_WARNING("Exceeded maximum buffer size");
 			break;
 		}
 		bufferPointer++;
 	}
 	m_frameBufferSize = bufferPointer;
-	std::cout << "Image size:" << std::to_string(bufferPointer) << " bytes" << std::endl;
     return bufferPointer;
 }
 
