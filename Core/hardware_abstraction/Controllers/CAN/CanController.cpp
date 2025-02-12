@@ -30,7 +30,7 @@ void CanController::initialize()
 	  hfdcan1.Init.TransmitPause = DISABLE;
 	  hfdcan1.Init.ProtocolException = ENABLE;
 
-	  hfdcan1.Init.NominalPrescaler = 50;
+	  hfdcan1.Init.NominalPrescaler = 25;
 	  hfdcan1.Init.NominalSyncJumpWidth = 50;
 	  hfdcan1.Init.NominalTimeSeg1 = 15;
 	  hfdcan1.Init.NominalTimeSeg2 = 6;
