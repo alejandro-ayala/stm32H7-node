@@ -159,7 +159,7 @@ def reconstruct_and_view_jpeg(output_directory, final_image_filename="FullJpegIm
 def read_can_messages(channel, output_file):
     """Lee mensajes CAN desde el canal especificado y los almacena en un archivo."""
     # Configurar la conexión con la PCAN-USB a 125 kbit/s usando 'interface'
-    bus = can.interface.Bus(interface='pcan', channel=channel, bitrate=125000)
+    bus = can.interface.Bus(interface='pcan', channel=channel, bitrate=250000)
     assembler = CBORAssembler()  # Instancia del ensamblador CBOR
 
     print(f"Listening for CAN messages on {channel}...")
