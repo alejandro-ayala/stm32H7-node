@@ -67,8 +67,8 @@ void CommunicationManager::receiveData()
 {
 	uint8_t lenght = 800;
 	uint8_t data[lenght];
-	int msgSize = canController->receiveMsg(data);
-
+	auto canMsg = canController->receiveMsg();
+	auto msgSize = canMsg.dlc;
 	if(msgSize > 0)
 	{
 		LOG_DEBUG("Received data:", msgSize, " bytes");

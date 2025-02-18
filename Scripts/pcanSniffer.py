@@ -1,4 +1,6 @@
 import can
+import time
+import threading
 from collections import defaultdict
 import re
 import cbor2
@@ -6,12 +8,18 @@ from typing import List, Dict, Tuple
 import os
 from PIL import Image
 import cv2
+import struct
 # Definición de clases y tipos
 ImageID = int
 CborID = int
 FrameIndex = int
 DataPayload = bytes
 MessageKey = Tuple[ImageID, CborID]
+updateGlobalClkPeriod = 3
+channel = 'PCAN_USBBUS1'  # Asegúrate de cambiar esto si tu bus es diferente
+output_file = 'image.jpeg'  # Nombre del archivo donde almacenar los mensajes
+# Configurar la conexión con la PCAN-USB a 125 kbit/s usando 'interface'
+bus = can.interface.Bus(interface='pcan', channel=channel, bitrate=250000)
 
 class ImageSnapshot:
     def __init__(self, byte_sequence):
@@ -156,10 +164,9 @@ def reconstruct_and_view_jpeg(output_directory, final_image_filename="FullJpegIm
     cv2.waitKey(0)
     cv2.destroyAllWindows()
     
-def read_can_messages(channel, output_file):
+def read_can_messages():
     """Lee mensajes CAN desde el canal especificado y los almacena en un archivo."""
-    # Configurar la conexión con la PCAN-USB a 125 kbit/s usando 'interface'
-    bus = can.interface.Bus(interface='pcan', channel=channel, bitrate=250000)
+
     assembler = CBORAssembler()  # Instancia del ensamblador CBOR
 
     print(f"Listening for CAN messages on {channel}...")
@@ -236,41 +243,47 @@ def read_can_messages(channel, output_file):
 
         finally:
             bus.shutdown()  # Cerrar la conexión al bus CAN
-    
-if __name__ == "__main__":
 
-    # inputData = "FFD8FFE000104A46494600010100000100010000FFDB0043002016181C1814201C1A1C24222026305034302C2C3062464A3A5074667A787266706E8090B89C8088AE8A6E70A0DAA2AEBEC4CED0CE7C9AE2F2E0C8F0B8CACEC6FFC0000B0800F0014001011100FFC4001F00000105010101010101000000000000000001020304"
-    # data = {
-    #     'msgId': 0,
-    #     'imgSize': 128,
-    #     'imgBuffer': bytes.fromhex(inputData),
-    #     'timestamp': 3134876076
-    # }
-    # dataSerialized = cbor2.dumps(data)
-    # print(dataSerialized.hex())
-    # print("\n")
-# 
-    # inputData2 = "0010180600044A1846184918060005460001010000060006010001000018060007FF18DB00184306696D6753980000000000A469696D67420600017566666572980600028018FF18D818060003FF18E00010180600044A1846184918060005460001010000060006010001000018060007FF18DB001843060008001820161818"
-    # data2 = {
-    #     'msgId': 1,
-    #     'imgSize': 128,
-    #     'imgBuffer': bytes.fromhex(inputData2),
-    #     'timestamp': 3134876076
-    # }
-    # dataSerialized2 = cbor2.dumps(data2)
-    # print(dataSerialized2.hex())
-    # print("\n")
-# 
-    # inputData3 = "1867184206000601070000181C000006010800000018A418060109691869186D1806010A67184206000106010B18751866186606010C18651872189806010D06000000000006010E00182C00000006010F18FC18FF18FF06011018FF000018A406011118691869186D0601121867184206000601130118751866180601146618"
-    # data3 = {
-    #     'msgId': 2,
-    #     'imgSize': 128,
-    #     'imgBuffer': bytes.fromhex(inputData3),
-    #     'timestamp': 3134876076
-    # }
-    # dataSerialized3 = cbor2.dumps(data3)
-    # print(dataSerialized3.hex())
-    # Aquí puedes especificar el canal, como 'PCAN_USBBUS1'
-    channel = 'PCAN_USBBUS1'  # Asegúrate de cambiar esto si tu bus es diferente
-    output_file = 'image.jpeg'  # Nombre del archivo donde almacenar los mensajes
-    read_can_messages(channel, output_file)
+def send_periodic_messages():
+    
+
+    while True:
+        current_time_ns = time.time_ns()
+        seconds = current_time_ns // 1_000_000_000  # Segundos actuales
+        nanoseconds = current_time_ns % 1_000_000_000  # Porción de nanosegundos
+        print(f"Segundos: {seconds}, Nanosegundos: {nanoseconds}")
+
+        # Serializa segundos y nanosegundos en 4 bytes (big-endian)
+        sec_bytes = struct.pack('>I', seconds)  # 4 bytes para los segundos
+        ns_bytes = struct.pack('>I', nanoseconds)  # 4 bytes para los nanosegundos
+        
+        syncMessage = can.Message(
+            arbitration_id=0x17,  # ID en formato estándar
+            data=[0x20, 0xFE, 0x00, 0x13] + list(sec_bytes),
+            is_extended_id=False  # CAN estándar
+        )
+        followUpMessage = can.Message(
+            arbitration_id=0x17,  # ID en formato estándar
+            data=[0x28, 0xF1, 0x00, 0x00] + list(ns_bytes), 
+            is_extended_id=False  # CAN estándar
+        )       
+        try:
+            bus.send(syncMessage)
+            #print("syncMessage")
+            time.sleep(0.1)  # Pequeño retraso entre mensajes consecutivos
+            bus.send(followUpMessage)
+            #print("followUpMessage")
+            time.sleep(updateGlobalClkPeriod)  # Tiempo entre envíos periódicos (ajústalo según sea necesario)
+        except can.CanError as e:
+            print(f"Error enviando mensaje: {e}")
+            
+if __name__ == "__main__":
+    receive_thread = threading.Thread(target=read_can_messages, daemon=True)
+    send_thread = threading.Thread(target=send_periodic_messages, daemon=True)
+    send_thread.start()
+    receive_thread.start()
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("Programa terminado.")

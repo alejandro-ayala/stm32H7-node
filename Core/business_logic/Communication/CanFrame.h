@@ -1,9 +1,13 @@
 #pragma once
 
+#define MAXIMUM_CAN_MSG_SIZE 8
+#define ID_FIELD_SIZE 3
+
 namespace business_logic
 {
 namespace Communication
 {
+
 typedef enum CAN_RxBuffer {
    CAN_Rx0 = 0, CAN_Rx1
 } CAN_RxBuffer;
