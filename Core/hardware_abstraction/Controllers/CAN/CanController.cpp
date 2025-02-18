@@ -1,4 +1,5 @@
 #include "CanController.h"
+#include <cstring>
 
 namespace hardware_abstraction
 {
@@ -59,13 +60,13 @@ void CanController::initialize()
 	  sFilterConfig.FilterIndex = 0;
 	  sFilterConfig.FilterType = FDCAN_FILTER_MASK;
 	  sFilterConfig.FilterConfig = FDCAN_FILTER_TO_RXFIFO0;
-	  sFilterConfig.FilterID1 = 0x111;
-	  sFilterConfig.FilterID2 = 0x7FF; /* For acceptance, MessageID and FilterID1 must match exactly */
+	  sFilterConfig.FilterID1 = 0x000;  // Aceptar desde ID 0x000
+	  sFilterConfig.FilterID2 = 0x000;  // Máscara en 0x000 acepta todo
 	  HAL_FDCAN_ConfigFilter(&hfdcan1, &sFilterConfig);
 
 	  /* Configure global filter to reject all non-matching frames */
-	  HAL_FDCAN_ConfigGlobalFilter(&hfdcan1, FDCAN_REJECT, FDCAN_REJECT, FDCAN_REJECT_REMOTE, FDCAN_REJECT_REMOTE);
-
+	  //HAL_FDCAN_ConfigGlobalFilter(&hfdcan1, FDCAN_REJECT, FDCAN_REJECT, FDCAN_REJECT_REMOTE, FDCAN_REJECT_REMOTE);
+	  HAL_FDCAN_ConfigGlobalFilter(&hfdcan1, FDCAN_ACCEPT_IN_RX_FIFO0, FDCAN_ACCEPT_IN_RX_FIFO0, FDCAN_ACCEPT_IN_RX_FIFO0, FDCAN_ACCEPT_IN_RX_FIFO0);
 	  /* Start the FDCAN module */
 	  HAL_FDCAN_Start(&hfdcan1);
 	  /* USER CODE END FDCAN1_Init 0*/
@@ -99,9 +100,20 @@ int CanController::transmitMsg(uint8_t idMsg, const uint8_t *txMsg, uint8_t data
 
 }
 
-int CanController::receiveMsg(uint8_t *rxBuffer)
+business_logic::Communication::CanFrame CanController::receiveMsg()
 {
-	return 1;
+
+	business_logic::Communication::CanFrame rxMsg;
+	uint8_t rxBuffer[16];
+	const auto pendingMsg = HAL_FDCAN_GetRxFifoFillLevel(&hfdcan1, FDCAN_RX_FIFO0);
+	if (pendingMsg >0)
+	{
+		HAL_FDCAN_GetRxMessage(&hfdcan1, FDCAN_RX_FIFO0, &rxHeader, rxBuffer);
+		rxMsg.id  = rxHeader.Identifier;
+		rxMsg.dlc = rxHeader.DataLength;
+		memcpy( rxMsg.data , rxBuffer , rxHeader.DataLength);
+	}
+	return rxMsg;
 }
 
 void CanController::integrationTest()

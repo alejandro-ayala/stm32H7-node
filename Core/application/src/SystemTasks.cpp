@@ -21,9 +21,9 @@ SystemTasks::SystemTasks(const std::shared_ptr<business_logic::Communication::Co
 
 void SystemTasks::createPoolTasks(const std::shared_ptr<business_logic::Communication::CommunicationManager>& commMng, const std::shared_ptr<business_logic::DataHandling::ImageCapturer>& imageCapturer, const std::shared_ptr<business_logic::ClockSyncronization::SharedClockSlaveManager>& sharedClkMng)
 {
-	//m_clockSyncTaskHandler    = std::make_shared<business_logic::Osal::TaskHandler>(SystemTasks::syncronizationGlobalClock, "syncronizationGlobalClockTask", DefaultPriorityTask, static_cast<business_logic::Osal::VoidPtr>(sharedClkMng.get()));
-	m_dataHandlingTaskHandler = std::make_shared<business_logic::Osal::TaskHandler>(SystemTasks::edgeDetection, "edgeDetection", DefaultPriorityTask + 1, static_cast<business_logic::Osal::VoidPtr>(&m_taskParam), 4096);
-	m_commTaskHandler         = std::make_shared<business_logic::Osal::TaskHandler>(SystemTasks::sendData, "sendDataTask", DefaultPriorityTask, static_cast<business_logic::Osal::VoidPtr>(commMng.get()), 4096);
+	m_clockSyncTaskHandler    = std::make_shared<business_logic::Osal::TaskHandler>(SystemTasks::syncronizationGlobalClock, "syncronizationGlobalClockTask", DefaultPriorityTask, static_cast<business_logic::Osal::VoidPtr>(sharedClkMng.get()));
+	//m_dataHandlingTaskHandler = std::make_shared<business_logic::Osal::TaskHandler>(SystemTasks::edgeDetection, "edgeDetection", DefaultPriorityTask + 1, static_cast<business_logic::Osal::VoidPtr>(&m_taskParam), 4096);
+	//m_commTaskHandler         = std::make_shared<business_logic::Osal::TaskHandler>(SystemTasks::sendData, "sendDataTask", DefaultPriorityTask, static_cast<business_logic::Osal::VoidPtr>(commMng.get()), 4096);
 
 }
 
@@ -119,14 +119,20 @@ void SystemTasks::syncronizationGlobalClock(void* argument)
 {
 	auto sharedClkMng = std::make_shared<business_logic::ClockSyncronization::SharedClockSlaveManager>(*static_cast<business_logic::ClockSyncronization::SharedClockSlaveManager*>(argument));
 
-	const auto syncClkPeriod = 15000;
+	const auto syncClkPeriod = 1000;
 	LOG_INFO("SystemTasks::syncronizationGlobalClock started");
 	/* USER CODE BEGIN 5 */
 	/* Infinite loop */
 	for(;;)
 	{
-		LOG_INFO("SystemTasks::syncronizationGlobalClock");
-		m_clockSyncTaskHandler->delayUntil(syncClkPeriod);
+		LOG_INFO("SystemTasks::syncronizationGlobalClock Updating global master time");
+		const bool isTimeUpdated = sharedClkMng->getGlobalTime();
+		if(isTimeUpdated)
+		{
+			const auto updatedTime = sharedClkMng->getTimeReference().toNs();
+			LOG_INFO("SystemTasks::syncronizationGlobalClock Updated global master time: ", updatedTime);
+		}
+		m_clockSyncTaskHandler->delay(syncClkPeriod);
 	}
 	/* USER CODE END 5 */
 }

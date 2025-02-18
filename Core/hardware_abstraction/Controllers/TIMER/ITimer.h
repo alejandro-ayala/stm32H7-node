@@ -1,10 +1,9 @@
 #pragma once
 #include <stdint.h>
 
-namespace business_logic
-{
-namespace ClockSyncronization
-{
+namespace hardware_abstraction {
+namespace Controllers {
+
 class ITimer {
 public:
 	bool    running;

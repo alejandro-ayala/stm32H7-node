@@ -1,6 +1,6 @@
 #pragma once
 #include "stm32h7xx_hal.h"
-
+#include "business_logic/Communication/CanFrame.h"
 #include "../IController.h"
 
 namespace hardware_abstraction
@@ -22,7 +22,7 @@ public:
 
 	virtual void initialize() override;
 	int transmitMsg(uint8_t idMsg, const uint8_t *txMsg, uint8_t dataSize);
-	int receiveMsg(uint8_t *rxBuffer);
+	business_logic::Communication::CanFrame receiveMsg();
 	bool selfTest() override;
 	void integrationTest();
 	void externalLoopbackTest();

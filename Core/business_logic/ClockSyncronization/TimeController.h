@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ITimer.h"
+#include "../../hardware_abstraction/Controllers/Timer/ITimer.h"
 #include "../../hardware_abstraction/Controllers/IController.h"
 
 #include "TimeStamp.h"
@@ -13,7 +13,7 @@ namespace ClockSyncronization
 class TimeController : public hardware_abstraction::Controllers::IController
 {
 private:
-	ITimer* internalTimer;
+	hardware_abstraction::Controllers::ITimer* internalTimer;
 	TimeStamp globalTimeStamp;
 public:
 	TimeController();

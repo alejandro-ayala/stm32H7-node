@@ -1,5 +1,5 @@
 #include "../ClockSyncronization/TimeController.h"
-
+#include "hardware_abstraction/Controllers/TIMER/STM32Timer.h"
 
 using namespace hardware_abstraction::Controllers;
 namespace business_logic
@@ -8,10 +8,13 @@ namespace ClockSyncronization
 {
 TimeController::TimeController() : IController("TimeController")
 {
-	internalTimer;
+	internalTimer = new STM32Timer();
 }
 
-TimeController::~TimeController() {};
+TimeController::~TimeController()
+{
+	delete internalTimer;
+};
 
 void TimeController::initialize()
 {
