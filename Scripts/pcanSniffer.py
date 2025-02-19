@@ -279,8 +279,8 @@ def send_periodic_messages():
             
 if __name__ == "__main__":
     receive_thread = threading.Thread(target=read_can_messages, daemon=True)
-    send_thread = threading.Thread(target=send_periodic_messages, daemon=True)
-    send_thread.start()
+    #send_thread = threading.Thread(target=send_periodic_messages, daemon=True)
+    #send_thread.start()
     receive_thread.start()
     try:
         while True:

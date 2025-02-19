@@ -38,7 +38,7 @@ void CommunicationManager::sendData(const std::vector<business_logic::Communicat
             data[i] = frame.payload[i - ID_FIELD_SIZE];
         }
 
-/*******/
+/*******
         std::ostringstream messageStream;
         messageStream << "CAN Message: ";
         messageStream << "ID=" << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(frame.canMsgId) << ", ";
@@ -56,7 +56,7 @@ void CommunicationManager::sendData(const std::vector<business_logic::Communicat
         std::string canMessage = messageStream.str();
         LOG_INFO(canMessage);
 
- /*******/
+ *******/
         canController->transmitMsg(static_cast<uint8_t>(CAN_IDs::IMAGE_DATA), data, dataSize);
         //TODO check and remove the delay
         HAL_Delay(2);
