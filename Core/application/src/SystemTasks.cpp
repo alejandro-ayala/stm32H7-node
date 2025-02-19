@@ -21,9 +21,9 @@ SystemTasks::SystemTasks(const std::shared_ptr<business_logic::Communication::Co
 
 void SystemTasks::createPoolTasks(const std::shared_ptr<business_logic::Communication::CommunicationManager>& commMng, const std::shared_ptr<business_logic::DataHandling::ImageCapturer>& imageCapturer, const std::shared_ptr<business_logic::ClockSyncronization::SharedClockSlaveManager>& sharedClkMng)
 {
-	m_clockSyncTaskHandler    = std::make_shared<business_logic::Osal::TaskHandler>(SystemTasks::syncronizationGlobalClock, "syncronizationGlobalClockTask", DefaultPriorityTask, static_cast<business_logic::Osal::VoidPtr>(sharedClkMng.get()));
-	//m_dataHandlingTaskHandler = std::make_shared<business_logic::Osal::TaskHandler>(SystemTasks::edgeDetection, "edgeDetection", DefaultPriorityTask + 1, static_cast<business_logic::Osal::VoidPtr>(&m_taskParam), 4096);
-	//m_commTaskHandler         = std::make_shared<business_logic::Osal::TaskHandler>(SystemTasks::sendData, "sendDataTask", DefaultPriorityTask, static_cast<business_logic::Osal::VoidPtr>(commMng.get()), 4096);
+	//m_clockSyncTaskHandler    = std::make_shared<business_logic::Osal::TaskHandler>(SystemTasks::syncronizationGlobalClock, "syncronizationGlobalClockTask", DefaultPriorityTask, static_cast<business_logic::Osal::VoidPtr>(sharedClkMng.get()));
+	m_dataHandlingTaskHandler = std::make_shared<business_logic::Osal::TaskHandler>(SystemTasks::edgeDetection, "edgeDetection", DefaultPriorityTask + 1, static_cast<business_logic::Osal::VoidPtr>(&m_taskParam), 4096);
+	m_commTaskHandler         = std::make_shared<business_logic::Osal::TaskHandler>(SystemTasks::sendData, "sendDataTask", DefaultPriorityTask, static_cast<business_logic::Osal::VoidPtr>(commMng.get()), 4096);
 
 }
 
@@ -32,7 +32,7 @@ void SystemTasks::edgeDetection(void* argument)
 	auto taskArg = static_cast<TaskParams*>(argument);
 	auto imageCapturer = taskArg->imageCapturer;//std::make_shared<business_logic::DataHandling::ImageCapturer>(*static_cast<business_logic::DataHandling::ImageCapturer*>(taskArg->imageCapturer.get()));
 	auto sharedClkMng  = taskArg->sharedClkMng;
-	const auto periodTimeCaptureImage = 30000;
+	const auto periodTimeCaptureImage = 3000;
 	const auto delayCameraStartup     = 1000;
 	LOG_INFO("SystemTasks::edgeDetection started");
     size_t freeHeapSize = xPortGetFreeHeapSize();
@@ -60,7 +60,7 @@ void SystemTasks::edgeDetection(void* argument)
 		minEverFreeHeapSize = xPortGetMinimumEverFreeHeapSize();
 
 		auto edgesPtr = edges->data();
-		const auto edgeCompressedImgSize = imageCapturer->processEdges(rawImgBuffer, edgesPtr, bufferSize);
+		const auto edgeCompressedImgSize = 3500;//imageCapturer->processEdges(rawImgBuffer, edgesPtr, bufferSize);
 		static uint8_t captureId = 0;
 		business_logic::DataSerializer::ImageSnapshot edgesSnapshot{captureId, 0x00, edgesPtr, edgeCompressedImgSize, captureTimestamp};
 		captureId++;
@@ -98,10 +98,10 @@ void SystemTasks::sendData(void* argument)
 		        m_dataSerializer->serialize(cborImgChunk, cborSerializedChunk);
 		        const auto ptrSerializedMsg = cborSerializedChunk.data();
 		        const auto serializedMsgSize = cborSerializedChunk.size();
-		        if(serializedMsgSize > MAXIMUM_CAN_MSG_SIZE)
-		        {
-		        	LOG_WARNING("Sending image information to master node");
-		        }
+//		        if(serializedMsgSize > MAXIMUM_CAN_MSG_SIZE)
+//		        {
+//		        	LOG_WARNING("Sending image information to master node overflow the buffer");
+//		        }
 
 		        std::vector<business_logic::Communication::CanMsg> canMsgChunks;
 		        const auto cborIndex = (nextSnapshot.m_msgId << 6) | (i & 0x3F);

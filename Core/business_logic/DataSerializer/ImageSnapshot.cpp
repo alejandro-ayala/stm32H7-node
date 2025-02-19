@@ -1,5 +1,6 @@
 #include "ImageSnapshot.h"
 #include "services/Exception/SystemExceptions.h"
+#include "services/Logger/LoggerMacros.h"
 #include <vector>
 #include "main.h"
 namespace business_logic
@@ -16,7 +17,7 @@ ImageSnapshot::ImageSnapshot(uint8_t msgId, uint8_t msgIndex, uint8_t* msgBuffer
 
 ImageSnapshot::~ImageSnapshot()
 {
-	//delete[] this->m_imgBuffer;
+	delete[] this->m_imgBuffer;
 }
 
 void ImageSnapshot::serialize(std::vector<uint8_t>& serializeData) const
