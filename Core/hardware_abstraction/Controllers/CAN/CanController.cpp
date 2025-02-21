@@ -1,5 +1,7 @@
 #include "CanController.h"
 #include <cstring>
+#include "services/Logger/LoggerMacros.h"
+
 
 namespace hardware_abstraction
 {
@@ -25,7 +27,7 @@ void CanController::initialize()
 	  /* USER CODE BEGIN FDCAN1_Init 0 */
 	 // HAL_FDCAN_DeInit(&hfdcan1);
 	  hfdcan1.Instance = FDCAN1;
-	  hfdcan1.Init.FrameFormat = FDCAN_FRAME_FD_BRS;
+	  hfdcan1.Init.FrameFormat = FDCAN_CLASSIC_CAN;
 	  hfdcan1.Init.Mode = FDCAN_MODE_NORMAL;
 	  hfdcan1.Init.AutoRetransmission = ENABLE;
 	  hfdcan1.Init.TransmitPause = DISABLE;
@@ -83,20 +85,25 @@ int CanController::transmitMsg(uint8_t idMsg, const uint8_t *txMsg, uint8_t data
 	txHeader.DataLength = dataSize;//FDCAN_DLC_BYTES_64;
 	txHeader.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
 	txHeader.BitRateSwitch = FDCAN_BRS_OFF;
-	txHeader.FDFormat = FDCAN_CLASSIC_CAN;
+	txHeader.FDFormat = FDCAN_FD_CAN;//FDCAN_CLASSIC_CAN;
 	txHeader.TxEventFifoControl = FDCAN_STORE_TX_EVENTS;
 	txHeader.MessageMarker = 0xCC;
 	auto fifoSpace = HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan1);
+
+	if(fifoSpace < 10)LOG_WARNING("CanController::transmitMsg fifoSpace is almost full ");
 	while(fifoSpace == 0)
 	{
+		LOG_ERROR("CanController::transmitMsg fifoSpace is full ");
 		HAL_Delay(300);
 		fifoSpace = HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan1);
 	}
 
 	if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &txHeader, txMsg) != HAL_OK)
 	{
-	  return HAL_ERROR;
+		LOG_ERROR("CanController::HAL_FDCAN_AddMessageToTxFifoQ NOT ADDED ");
+		return HAL_ERROR;
 	}
+	HAL_Delay(50);
 
 }
 

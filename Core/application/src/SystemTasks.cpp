@@ -17,13 +17,21 @@ SystemTasks::SystemTasks(const std::shared_ptr<business_logic::Communication::Co
 
 	m_taskParam.imageCapturer = imageCapturer;
 	m_taskParam.sharedClkMng  = sharedClkMng;
+
+	LOG_INFO(" Initial value of queue: ", isPendingData());
 }
 
 void SystemTasks::createPoolTasks(const std::shared_ptr<business_logic::Communication::CommunicationManager>& commMng, const std::shared_ptr<business_logic::DataHandling::ImageCapturer>& imageCapturer, const std::shared_ptr<business_logic::ClockSyncronization::SharedClockSlaveManager>& sharedClkMng)
 {
-	//m_clockSyncTaskHandler    = std::make_shared<business_logic::Osal::TaskHandler>(SystemTasks::syncronizationGlobalClock, "syncronizationGlobalClockTask", DefaultPriorityTask, static_cast<business_logic::Osal::VoidPtr>(sharedClkMng.get()));
-	m_dataHandlingTaskHandler = std::make_shared<business_logic::Osal::TaskHandler>(SystemTasks::edgeDetection, "edgeDetection", DefaultPriorityTask + 1, static_cast<business_logic::Osal::VoidPtr>(&m_taskParam), 4096);
-	m_commTaskHandler         = std::make_shared<business_logic::Osal::TaskHandler>(SystemTasks::sendData, "sendDataTask", DefaultPriorityTask, static_cast<business_logic::Osal::VoidPtr>(commMng.get()), 4096);
+	try {
+		m_clockSyncTaskHandler    = std::make_shared<business_logic::Osal::TaskHandler>(SystemTasks::syncronizationGlobalClock, "syncronizationGlobalClockTask", DefaultPriorityTask +2, static_cast<business_logic::Osal::VoidPtr>(sharedClkMng.get()), 4096);
+		m_dataHandlingTaskHandler = std::make_shared<business_logic::Osal::TaskHandler>(SystemTasks::edgeDetection, "edgeDetection", DefaultPriorityTask + 1, static_cast<business_logic::Osal::VoidPtr>(&m_taskParam), 4096);
+		m_commTaskHandler         = std::make_shared<business_logic::Osal::TaskHandler>(SystemTasks::sendData, "sendDataTask", DefaultPriorityTask, static_cast<business_logic::Osal::VoidPtr>(commMng.get()), 4096);
+
+	} catch (...)
+	{
+		LOG_ERROR("SystemTasks::createPoolTasks FAILED");
+	}
 
 }
 
@@ -66,10 +74,12 @@ void SystemTasks::edgeDetection(void* argument)
 		captureId++;
 		if(captureId == 4) captureId = 0;
 		const auto isInserted = m_capturesQueue->sendToBack(( void * ) &edgesSnapshot);
+		LOG_INFO("SystemTasks::edgeDetection captureImage INSERTED to queue");
 		if(!isInserted)
 		{
 			LOG_ERROR("Failed to insert snapshot");
 		}
+		LOG_INFO("SystemTasks::edgeDetection captureImage done");
 		m_dataHandlingTaskHandler->delay(periodTimeCaptureImage);
 	}
 	/* USER CODE END 5 */
@@ -85,11 +95,13 @@ void SystemTasks::sendData(void* argument)
 	/* Infinite loop */
 	for(;;)
 	{
+		const auto pendingMsgs = isPendingData();
 		if(isPendingData())
 		{
-			LOG_INFO("Sending image information to master node");
+			LOG_INFO("Sending image information to master node. PendingMSg: ", pendingMsgs);
 			business_logic::DataSerializer::ImageSnapshot nextSnapshot;
 			getNextImage(nextSnapshot);
+			LOG_INFO(" PendingMSg after getNextImage: ", isPendingData());
 			for(size_t i = 0; i < (nextSnapshot.m_imgSize / MAXIMUN_CBOR_BUFFER_SIZE); i++)
 		    {
 				business_logic::DataSerializer::ImageSnapshot cborImgChunk{nextSnapshot.m_msgId, i, nextSnapshot.m_imgBuffer + (i*MAXIMUN_CBOR_BUFFER_SIZE), MAXIMUN_CBOR_BUFFER_SIZE, nextSnapshot.m_timestamp};
@@ -98,16 +110,13 @@ void SystemTasks::sendData(void* argument)
 		        m_dataSerializer->serialize(cborImgChunk, cborSerializedChunk);
 		        const auto ptrSerializedMsg = cborSerializedChunk.data();
 		        const auto serializedMsgSize = cborSerializedChunk.size();
-//		        if(serializedMsgSize > MAXIMUM_CAN_MSG_SIZE)
-//		        {
-//		        	LOG_WARNING("Sending image information to master node overflow the buffer");
-//		        }
 
 		        std::vector<business_logic::Communication::CanMsg> canMsgChunks;
 		        const auto cborIndex = (nextSnapshot.m_msgId << 6) | (i & 0x3F);
 		        splitCborToCanMsgs(cborIndex, cborSerializedChunk, canMsgChunks);
 				commMng->sendData(canMsgChunks);
 		    }
+			LOG_INFO("Sending image information to master node done");
 		}
 
 		m_commTaskHandler->delayUntil(sendDataPeriod);
@@ -137,13 +146,15 @@ void SystemTasks::syncronizationGlobalClock(void* argument)
 	/* USER CODE END 5 */
 }
 
-bool SystemTasks::isPendingData()
+uint8_t SystemTasks::isPendingData()
 {
-	return (m_capturesQueue->getStoredMsg() > 0);
+	const auto pendingMsg = m_capturesQueue->getStoredMsg();
+	return pendingMsg;
 }
 
 void SystemTasks::getNextImage(business_logic::DataSerializer::ImageSnapshot& edgesSnapshot)
 {
+	LOG_INFO("SystemTasks::getNextImage");
 	m_capturesQueue->receive(&edgesSnapshot);
 }
 
