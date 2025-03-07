@@ -10,6 +10,7 @@ namespace Controllers
 
 CanController::CanController() : IController("CanController")
 {
+	canMutex = std::make_shared<business_logic::Osal::MutexHandler>();
 	initialize();
     HAL_FDCAN_DeInit(&hfdcan1);
     initialize();
@@ -88,6 +89,8 @@ int CanController::transmitMsg(uint8_t idMsg, const uint8_t *txMsg, uint8_t data
 	txHeader.FDFormat = FDCAN_FD_CAN;//FDCAN_CLASSIC_CAN;
 	txHeader.TxEventFifoControl = FDCAN_STORE_TX_EVENTS;
 	txHeader.MessageMarker = 0xCC;
+
+	canMutex->lock();
 	auto fifoSpace = HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan1);
 
 	if(fifoSpace < 10)LOG_WARNING("CanController::transmitMsg fifoSpace is almost full ");
@@ -104,6 +107,7 @@ int CanController::transmitMsg(uint8_t idMsg, const uint8_t *txMsg, uint8_t data
 		return HAL_ERROR;
 	}
 	HAL_Delay(50);
+	canMutex->unlock();
 
 }
 
@@ -112,6 +116,7 @@ business_logic::Communication::CanFrame CanController::receiveMsg()
 
 	business_logic::Communication::CanFrame rxMsg;
 	uint8_t rxBuffer[16];
+	canMutex->lock();
 	const auto pendingMsg = HAL_FDCAN_GetRxFifoFillLevel(&hfdcan1, FDCAN_RX_FIFO0);
 	if (pendingMsg >0)
 	{
@@ -120,6 +125,7 @@ business_logic::Communication::CanFrame CanController::receiveMsg()
 		rxMsg.dlc = rxHeader.DataLength;
 		memcpy( rxMsg.data , rxBuffer , rxHeader.DataLength);
 	}
+	canMutex->unlock();
 	return rxMsg;
 }
 

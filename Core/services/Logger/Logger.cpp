@@ -49,15 +49,13 @@ void Logger::initialize()
 	{
 		error++;
 	}
-
+	uartMutex = std::make_shared<business_logic::Osal::MutexHandler>();
 	outSink = std::make_unique<hardware_abstraction::Controllers::UARTController>(hardware_abstraction::Controllers::UARTController(&sinkCff));
 	outSink->initialize();
 }
 
 void Logger::log(LogLevel logLevel, const std::string& msg)
 {
-	if((m_logLevel > logLevel) || m_disable) return;
-
 	std::string logMsg;
     switch (logLevel)
     {
@@ -70,7 +68,9 @@ void Logger::log(LogLevel logLevel, const std::string& msg)
     default: THROW_SERVICES_EXCEPTION(ServicesErrorId::LoggerUnknownLevel, "Unknown logging level")
 
     }
+    uartMutex->lock();
 	outSink->send(logMsg);
+	uartMutex->unlock();
 }
 
 void Logger::setLogLevel(LogLevel logLevel)

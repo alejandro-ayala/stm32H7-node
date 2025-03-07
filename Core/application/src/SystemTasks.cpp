@@ -18,7 +18,7 @@ SystemTasks::SystemTasks(const std::shared_ptr<business_logic::Communication::Co
 	m_taskParam.imageCapturer = imageCapturer;
 	m_taskParam.sharedClkMng  = sharedClkMng;
 
-	LOG_INFO(" Initial value of queue: ", isPendingData());
+	LOG_INFO(" Initial value of queue: ", std::to_string(isPendingData()));
 }
 
 void SystemTasks::createPoolTasks(const std::shared_ptr<business_logic::Communication::CommunicationManager>& commMng, const std::shared_ptr<business_logic::DataHandling::ImageCapturer>& imageCapturer, const std::shared_ptr<business_logic::ClockSyncronization::SharedClockSlaveManager>& sharedClkMng)
@@ -40,7 +40,7 @@ void SystemTasks::edgeDetection(void* argument)
 	auto taskArg = static_cast<TaskParams*>(argument);
 	auto imageCapturer = taskArg->imageCapturer;//std::make_shared<business_logic::DataHandling::ImageCapturer>(*static_cast<business_logic::DataHandling::ImageCapturer*>(taskArg->imageCapturer.get()));
 	auto sharedClkMng  = taskArg->sharedClkMng;
-	const auto periodTimeCaptureImage = 3000;
+	const auto periodTimeCaptureImage = 10000;
 	const auto delayCameraStartup     = 1000;
 	LOG_INFO("SystemTasks::edgeDetection started");
     size_t freeHeapSize = xPortGetFreeHeapSize();
@@ -56,7 +56,7 @@ void SystemTasks::edgeDetection(void* argument)
     minEverFreeHeapSize = xPortGetMinimumEverFreeHeapSize();
 	for(;;)
 	{
-		LOG_INFO("SystemTasks::edgeDetection captureImage");
+		LOG_TRACE("SystemTasks::edgeDetection captureImage");
 		imageCapturer->captureImage();
 		const auto captureTimestamp = sharedClkMng->getTimeReference().toNs();
 		imageCapturer->extractImage();
@@ -74,12 +74,12 @@ void SystemTasks::edgeDetection(void* argument)
 		captureId++;
 		if(captureId == 4) captureId = 0;
 		const auto isInserted = m_capturesQueue->sendToBack(( void * ) &edgesSnapshot);
-		LOG_INFO("SystemTasks::edgeDetection captureImage INSERTED to queue");
+		LOG_TRACE("SystemTasks::edgeDetection captureImage INSERTED to queue");
 		if(!isInserted)
 		{
 			LOG_ERROR("Failed to insert snapshot");
 		}
-		LOG_INFO("SystemTasks::edgeDetection captureImage done");
+		LOG_TRACE("SystemTasks::edgeDetection captureImage done");
 		m_dataHandlingTaskHandler->delay(periodTimeCaptureImage);
 	}
 	/* USER CODE END 5 */
@@ -98,7 +98,7 @@ void SystemTasks::sendData(void* argument)
 		const auto pendingMsgs = isPendingData();
 		if(isPendingData())
 		{
-			LOG_INFO("Sending image information to master node. PendingMSg: ", pendingMsgs);
+			LOG_INFO("Sending image information to master node. PendingMSg: ", std::to_string(pendingMsgs));
 			business_logic::DataSerializer::ImageSnapshot nextSnapshot;
 			getNextImage(nextSnapshot);
 			LOG_INFO(" PendingMSg after getNextImage: ", isPendingData());
@@ -128,13 +128,12 @@ void SystemTasks::syncronizationGlobalClock(void* argument)
 {
 	auto sharedClkMng = std::make_shared<business_logic::ClockSyncronization::SharedClockSlaveManager>(*static_cast<business_logic::ClockSyncronization::SharedClockSlaveManager*>(argument));
 
-	const auto syncClkPeriod = 1000;
+	const auto syncClkPeriod = 15000;
 	LOG_INFO("SystemTasks::syncronizationGlobalClock started");
 	/* USER CODE BEGIN 5 */
 	/* Infinite loop */
 	for(;;)
 	{
-		LOG_INFO("SystemTasks::syncronizationGlobalClock Updating global master time");
 		const bool isTimeUpdated = sharedClkMng->getGlobalTime();
 		if(isTimeUpdated)
 		{

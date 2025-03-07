@@ -103,13 +103,13 @@ uint32_t Ov2640Ctrl::processCapture()
 				&& m_frameBuffer[bufferPointer + 1] == 0xD8)
 		{
 			headerFound = true;
-			LOG_INFO("Found header of JPEG file");
+			LOG_TRACE("Found header of JPEG file");
 		}
 		if (headerFound && m_frameBuffer[bufferPointer] == 0xFF
 				&& m_frameBuffer[bufferPointer + 1] == 0xD9)
 		{
 			bufferPointer = bufferPointer + 2;
-			LOG_INFO("Found EOI of JPEG file");
+			LOG_TRACE("Found EOI of JPEG file");
 			headerFound = false;
 
 			break;

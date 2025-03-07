@@ -2,6 +2,8 @@
 #include "stm32h7xx_hal.h"
 #include "business_logic/Communication/CanFrame.h"
 #include "../IController.h"
+#include <memory>
+#include "business_logic/Osal/MutexHandler.h"
 
 namespace hardware_abstraction
 {
@@ -15,6 +17,7 @@ private:
 	FDCAN_TxHeaderTypeDef txHeader;
 	FDCAN_RxHeaderTypeDef rxHeader;
 	int deviceId;
+	std::shared_ptr<business_logic::Osal::MutexHandler> canMutex;
 
 public:
 	CanController();
