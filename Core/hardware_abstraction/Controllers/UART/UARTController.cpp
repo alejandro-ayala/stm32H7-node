@@ -47,7 +47,7 @@ void UARTController::send(const std::string& command)
 	const auto state = HAL_UART_Transmit(&uartHandle, data, size, blockingTime);
 	if(state)
 	{
-		THROW_CONTROLLERS_EXCEPTION(services::UartTxError, "Uart controller sending error")
+		//THROW_CONTROLLERS_EXCEPTION(services::UartTxError, "Uart controller sending error")
 	}
 }
 
