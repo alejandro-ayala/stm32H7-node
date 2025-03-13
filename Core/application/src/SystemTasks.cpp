@@ -114,11 +114,11 @@ void SystemTasks::sendData(void* argument)
 		        std::vector<business_logic::Communication::CanMsg> canMsgChunks;
 		        const auto cborIndex = (nextSnapshot.m_msgId << 6) | (i & 0x3F);
 		        splitCborToCanMsgs(cborIndex, cborSerializedChunk, canMsgChunks);
+//				generateCanMsgsTest(cborIndex, cborSerializedChunk, canMsgChunks);
 				commMng->sendData(canMsgChunks);
 		    }
 			LOG_INFO("Sending image information to master node done");
 		}
-
 		m_commTaskHandler->delayUntil(sendDataPeriod);
 	}
 	/* USER CODE END 5 */
@@ -173,12 +173,14 @@ void SystemTasks::splitCborToCanMsgs(uint8_t canMsgId, const std::vector<uint8_t
         size_t endIdx = std::min(startIdx + payloadSize, totalBytes);
         canMsg.payloadSize = endIdx - startIdx;
 
-        for (size_t j = startIdx; j < endIdx; ++j)
+        for (size_t j = startIdx; j < endIdx - 1; ++j)
         {
             canMsg.payload[j - startIdx] = cborSerializedChunk[j];
         }
         canMsgChunks.push_back(canMsg);
     }
 }
-
 }
+
+
+
