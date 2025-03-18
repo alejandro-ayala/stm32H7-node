@@ -18,7 +18,7 @@ SystemTasks::SystemTasks(const std::shared_ptr<business_logic::Communication::Co
 	m_taskParam.imageCapturer = imageCapturer;
 	m_taskParam.sharedClkMng  = sharedClkMng;
 
-	LOG_INFO(" Initial value of queue: ", std::to_string(isPendingData()));
+	LOG_TRACE(" Initial value of queue: ", std::to_string(isPendingData()));
 }
 
 void SystemTasks::createPoolTasks(const std::shared_ptr<business_logic::Communication::CommunicationManager>& commMng, const std::shared_ptr<business_logic::DataHandling::ImageCapturer>& imageCapturer, const std::shared_ptr<business_logic::ClockSyncronization::SharedClockSlaveManager>& sharedClkMng)
@@ -98,16 +98,22 @@ void SystemTasks::sendData(void* argument)
 		const auto pendingMsgs = isPendingData();
 		if(isPendingData())
 		{
-			LOG_INFO("Sending image information to master node. PendingMSg: ", std::to_string(pendingMsgs));
+			LOG_DEBUG("Sending image information to master node. PendingMSg: ", std::to_string(pendingMsgs));
 			business_logic::DataSerializer::ImageSnapshot nextSnapshot;
 			getNextImage(nextSnapshot);
-			LOG_INFO(" PendingMSg after getNextImage: ", isPendingData());
+			LOG_TRACE(" PendingMSg after getNextImage: ", isPendingData());
 			for(size_t i = 0; i < (nextSnapshot.m_imgSize / MAXIMUN_CBOR_BUFFER_SIZE); i++)
 		    {
 				business_logic::DataSerializer::ImageSnapshot cborImgChunk{nextSnapshot.m_msgId, i, nextSnapshot.m_imgBuffer + (i*MAXIMUN_CBOR_BUFFER_SIZE), MAXIMUN_CBOR_BUFFER_SIZE, nextSnapshot.m_timestamp};
 		    	const auto ptrImgChunkBuffer = cborImgChunk.m_imgBuffer;
 				std::vector<uint8_t> cborSerializedChunk;
 		        m_dataSerializer->serialize(cborImgChunk, cborSerializedChunk);
+
+				std::string cborStr;
+				for(const auto& element : cborSerializedChunk)
+					cborStr += std::to_string(element) + " ";
+				LOG_INFO(cborStr);
+
 		        const auto ptrSerializedMsg = cborSerializedChunk.data();
 		        const auto serializedMsgSize = cborSerializedChunk.size();
 
@@ -117,7 +123,7 @@ void SystemTasks::sendData(void* argument)
 //				generateCanMsgsTest(cborIndex, cborSerializedChunk, canMsgChunks);
 				commMng->sendData(canMsgChunks);
 		    }
-			LOG_INFO("Sending image information to master node done");
+			LOG_DEBUG("Sending image information to master node done");
 		}
 		m_commTaskHandler->delayUntil(sendDataPeriod);
 	}
@@ -153,14 +159,14 @@ uint8_t SystemTasks::isPendingData()
 
 void SystemTasks::getNextImage(business_logic::DataSerializer::ImageSnapshot& edgesSnapshot)
 {
-	LOG_INFO("SystemTasks::getNextImage");
+	LOG_TRACE("SystemTasks::getNextImage");
 	m_capturesQueue->receive(&edgesSnapshot);
 }
 
 void SystemTasks::splitCborToCanMsgs(uint8_t canMsgId, const std::vector<uint8_t>& cborSerializedChunk, std::vector<business_logic::Communication::CanMsg>& canMsgChunks)
 {
     size_t totalBytes = cborSerializedChunk.size();
-    size_t payloadSize = MAXIMUM_CAN_MSG_SIZE - 2;
+    size_t payloadSize = MAXIMUM_CAN_MSG_SIZE - CAN_MSG_ID_FIELD_SIZE;
     size_t numberOfMsgs = (totalBytes + payloadSize - 1) / payloadSize;
 
     for (size_t i = 0; i < numberOfMsgs; ++i)
@@ -170,13 +176,21 @@ void SystemTasks::splitCborToCanMsgs(uint8_t canMsgId, const std::vector<uint8_t
         canMsg.canMsgId =canMsgId;
         canMsg.canMsgIndex = static_cast<uint8_t>(i);
         size_t startIdx = i * payloadSize;
-        size_t endIdx = std::min(startIdx + payloadSize, totalBytes);
-        canMsg.payloadSize = endIdx - startIdx;
+        size_t endIdx = std::min(startIdx + payloadSize -1, totalBytes - 1);
 
-        for (size_t j = startIdx; j < endIdx - 1; ++j)
+        canMsg.payloadSize = endIdx - startIdx + 1;
+        if(i == (numberOfMsgs - 1))
+        {
+        	LOG_DEBUG("Last msg to split with a size: ", std::to_string(canMsg.payloadSize));
+        }
+		std::string cborStr = "splitCborToCanMsgs: ";
+
+        for (size_t j = startIdx; j <= endIdx; ++j)
         {
             canMsg.payload[j - startIdx] = cborSerializedChunk[j];
+            cborStr += std::to_string(canMsg.payload[j - startIdx]) + " ";
         }
+        LOG_INFO(cborStr);
         canMsgChunks.push_back(canMsg);
     }
 }
