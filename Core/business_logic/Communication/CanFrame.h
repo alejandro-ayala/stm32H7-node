@@ -1,13 +1,13 @@
 #pragma once
 
-#define MAXIMUM_CAN_MSG_SIZE 8
-#define ID_FIELD_SIZE 3
-
 namespace business_logic
 {
 namespace Communication
 {
 
+#define MAXIMUM_CAN_MSG_SIZE 8
+#define METADATA_CAN_MSG_SIZE 3
+#define CAN_MSG_ID_FIELD_SIZE 2
 typedef enum CAN_RxBuffer {
    CAN_Rx0 = 0, CAN_Rx1
 } CAN_RxBuffer;
@@ -40,7 +40,7 @@ typedef struct CanMsg
 {
 	uint8_t canMsgId;
 	uint8_t canMsgIndex;
-	uint8_t payload[MAXIMUM_CAN_MSG_SIZE - ID_FIELD_SIZE];
+	uint8_t payload[MAXIMUM_CAN_MSG_SIZE - CAN_MSG_ID_FIELD_SIZE];
 	uint8_t payloadSize;
 } CanMsg;
 
