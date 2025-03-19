@@ -1,6 +1,6 @@
 #include "JpegCompressor.h"
 #include <stdexcept>
-#include <new> // Para std::nothrow
+#include <vector>
 #include <memory>
 
 namespace business_logic
@@ -50,58 +50,55 @@ void JpegCompressor::setupDecodeJPEG(uint8_t *jpegImg, uint16_t buffer_length, u
         imageState.grayscale = (m_cinfo_decomp.num_components == 1) ? 1 : 0;
     }
 }
-
 unsigned long JpegCompressor::decompress(uint8_t *jpegImg, uint16_t jpegImgSize, uint8_t *rawImg, size_t& rawImgSize, uint8_t greyscale, ImageState& imageState)
 {
     setupDecodeJPEG(jpegImg, jpegImgSize, greyscale, imageState);
-	JSAMPROW row_pointer[1];
-	//row_pointer[0] = (unsigned char*) malloc(cinfo.output_width * cinfo.num_components);
-	row_pointer[0]   = new unsigned char[m_cinfo_decomp.output_width * m_cinfo_decomp.num_components];
+
+    std::unique_ptr<uint8_t[]> row_buffer = std::make_unique<uint8_t[]>(m_cinfo_decomp.output_width * m_cinfo_decomp.num_components);
+    JSAMPROW row_pointer[1];
+    row_pointer[0] = row_buffer.get();
 
 #ifdef FLOAT_ENABLE
-	float value_red, value_green, value_blue;
+    float value_red, value_green, value_blue;
 #else
-		uint8_t value_red, value_green, value_blue;
+    uint8_t value_red, value_green, value_blue;
 #endif
 
-	uint8_t pixel_number = 0;
-	unsigned long pixel_location = 0;
-	while (m_cinfo_decomp.output_scanline < m_cinfo_decomp.image_height)
-	{
-		jpeg_read_scanlines(&m_cinfo_decomp, row_pointer, 1);
-		for (short i = 0; i < m_cinfo_decomp.image_width * m_cinfo_decomp.num_components; i++)
-		{
-			if(greyscale==1)
-			{
-				pixel_number++;
-				if (pixel_number == 1) {
-					value_red = row_pointer[0][i];
-				}
-				if (pixel_number == 2) {
-					value_green = row_pointer[0][i];
-				}
-				if (pixel_number == 3) {
-					value_blue = row_pointer[0][i];
-	#ifdef FLOAT_ENABLE
-					rawImg[pixel_location++] = (value_red * 0.299
-							+ value_green * 0.587 + value_blue * 0.114);
-	#else
-					rawImg[pixel_location++] = static_cast<uint8_t>(value_red/3+value_green/3+value_blue/3);
-	#endif
-					pixel_number = 0;
-				}
-			}
-			else
-			{
-				rawImg[pixel_location++] = static_cast<uint8_t>(row_pointer[0][i]);
-			}
-		}
-	}
+    uint8_t pixel_number = 0;
+    unsigned long pixel_location = 0;
+    while (m_cinfo_decomp.output_scanline < m_cinfo_decomp.image_height)
+    {
+        jpeg_read_scanlines(&m_cinfo_decomp, row_pointer, 1);
+        for (short i = 0; i < m_cinfo_decomp.image_width * m_cinfo_decomp.num_components; i++)
+        {
+            if (greyscale == 1)
+            {
+                pixel_number++;
+                if (pixel_number == 1) value_red = row_pointer[0][i];
+                if (pixel_number == 2) value_green = row_pointer[0][i];
+                if (pixel_number == 3)
+                {
+                    value_blue = row_pointer[0][i];
+#ifdef FLOAT_ENABLE
+                    rawImg[pixel_location++] = (value_red * 0.299
+                            + value_green * 0.587 + value_blue * 0.114);
+#else
+                    rawImg[pixel_location++] = static_cast<uint8_t>(value_red / 3 + value_green / 3 + value_blue / 3);
+#endif
+                    pixel_number = 0;
+                }
+            }
+            else
+            {
+                rawImg[pixel_location++] = static_cast<uint8_t>(row_pointer[0][i]);
+            }
+        }
+    }
 
-	rawImgSize = pixel_location;
-	jpeg_finish_decompress(&m_cinfo_decomp);
-	delete[] row_pointer[0];
-	return pixel_location;
+    rawImgSize = pixel_location;
+    jpeg_finish_decompress(&m_cinfo_decomp);
+
+    return pixel_location;
 }
 
 void JpegCompressor::setupEncodeJPEG(uint8_t **image_buffer, unsigned long *image_size, uint8_t image_quality, ImageState imageState)
