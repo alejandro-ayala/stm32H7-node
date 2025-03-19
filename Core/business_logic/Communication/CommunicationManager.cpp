@@ -32,10 +32,8 @@ void CommunicationManager::sendData(const std::vector<business_logic::Communicat
     	const auto& frame = dataToSend.at(currentMsgIndex);
         uint8_t data[MAXIMUM_CAN_MSG_SIZE] = {0};
         uint8_t i = 0;
-        data[i] = frame.canMsgId;
-        i++;
-        data[i] = frame.canMsgIndex;
-        i++;
+        data[i++] = frame.canMsgId;
+        data[i++] = frame.canMsgIndex;
     	if(currentMsgIndex == (msgToSend - 1))
     	{
     		LOG_DEBUG("Last msg to send with a size: ", std::to_string(frame.payloadSize));
@@ -66,7 +64,7 @@ void CommunicationManager::sendData(const std::vector<business_logic::Communicat
 
  *******/
         std::string frameSize = "Sending frame of size" + std::to_string(dataSize) + " : ";
-        LOG_INFO(frameSize, std::to_string(data[0]), " ", std::to_string(data[1]), " ", std::to_string(data[2]), " ", std::to_string(data[3]), " ",std::to_string(data[4]), " ", std::to_string(data[5]), " ", std::to_string(data[6]), " ", std::to_string(data[7]));
+        LOG_TRACE(frameSize, std::to_string(data[0]), " ", std::to_string(data[1]), " ", std::to_string(data[2]), " ", std::to_string(data[3]), " ",std::to_string(data[4]), " ", std::to_string(data[5]), " ", std::to_string(data[6]), " ", std::to_string(data[7]));
         canController->transmitMsg(static_cast<uint8_t>(CAN_IDs::IMAGE_DATA), data, dataSize);
         //TODO check and remove the delay
         HAL_Delay(2);
