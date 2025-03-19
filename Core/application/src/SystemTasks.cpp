@@ -104,8 +104,8 @@ void SystemTasks::sendData(void* argument)
 			LOG_TRACE(" PendingMSg after getNextImage: ", isPendingData());
 			for(size_t i = 0; i < (nextSnapshot.m_imgSize / MAXIMUN_CBOR_BUFFER_SIZE); i++)
 		    {
-				business_logic::DataSerializer::ImageSnapshot cborImgChunk{nextSnapshot.m_msgId, i, nextSnapshot.m_imgBuffer + (i*MAXIMUN_CBOR_BUFFER_SIZE), MAXIMUN_CBOR_BUFFER_SIZE, nextSnapshot.m_timestamp};
-		    	const auto ptrImgChunkBuffer = cborImgChunk.m_imgBuffer;
+				business_logic::DataSerializer::ImageSnapshot cborImgChunk{nextSnapshot.m_msgId, i, nextSnapshot.m_imgBuffer.get() + (i*MAXIMUN_CBOR_BUFFER_SIZE), MAXIMUN_CBOR_BUFFER_SIZE, nextSnapshot.m_timestamp};
+		    	const auto ptrImgChunkBuffer = cborImgChunk.m_imgBuffer.get();
 				std::vector<uint8_t> cborSerializedChunk;
 		        m_dataSerializer->serialize(cborImgChunk, cborSerializedChunk);
 
@@ -179,10 +179,7 @@ void SystemTasks::splitCborToCanMsgs(uint8_t canMsgId, const std::vector<uint8_t
         size_t endIdx = std::min(startIdx + payloadSize -1, totalBytes - 1);
 
         canMsg.payloadSize = endIdx - startIdx + 1;
-        if(i == (numberOfMsgs - 1))
-        {
-        	LOG_DEBUG("Last msg to split with a size: ", std::to_string(canMsg.payloadSize));
-        }
+
 		std::string cborStr = "splitCborToCanMsgs: ";
 
         for (size_t j = startIdx; j <= endIdx; ++j)
@@ -190,7 +187,7 @@ void SystemTasks::splitCborToCanMsgs(uint8_t canMsgId, const std::vector<uint8_t
             canMsg.payload[j - startIdx] = cborSerializedChunk[j];
             cborStr += std::to_string(canMsg.payload[j - startIdx]) + " ";
         }
-        LOG_INFO(cborStr);
+        //LOG_TRACE(cborStr);
         canMsgChunks.push_back(canMsg);
     }
 }
