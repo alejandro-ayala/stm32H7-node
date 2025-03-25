@@ -14,8 +14,8 @@ private:
 public:
 	DataSerializer() = default;
 	virtual ~DataSerializer() = default;
-	void deserialize(ISerializableMessage& msg, const std::vector<uint8_t>& data) override;
-	void serialize(const ISerializableMessage& msg, std::vector<uint8_t>& msgSerialized) const override;
+	void deserializeMsg(ISerializableMessage& msg, const std::vector<uint8_t>& data) override;
+	void serializeMsg(const ISerializableMessage& msg, std::vector<uint8_t>& msgSerialized) const override;
 };
 }
 }

@@ -5,12 +5,12 @@ namespace business_logic
 namespace DataSerializer
 {
 
-void DataSerializer::serialize(const ISerializableMessage& msg, std::vector<uint8_t>& msgSerialized) const
+void DataSerializer::serializeMsg(const ISerializableMessage& msg, std::vector<uint8_t>& msgSerialized) const
 {
     msg.serialize(msgSerialized);
 }
 
-void DataSerializer::deserialize(ISerializableMessage& msg, const std::vector<uint8_t>& data)
+void DataSerializer::deserializeMsg(ISerializableMessage& msg, const std::vector<uint8_t>& data)
 {
     msg.deserialize(data);
 }
