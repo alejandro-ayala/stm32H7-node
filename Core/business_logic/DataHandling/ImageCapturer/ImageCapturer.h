@@ -20,7 +20,7 @@ private:
 	std::shared_ptr<JpegCompressor> m_imageCompressor;
 	std::shared_ptr<IEncoder> m_imageEncoder;
 
-	uint8_t* m_pic;
+	std::unique_ptr<uint8_t[]> m_pic;
 	ImageState m_imageState;
 	size_t m_picSize;
 	ImageConfiguration m_imageConfig;

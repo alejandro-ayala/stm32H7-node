@@ -128,7 +128,6 @@ void JpegCompressor::compress(uint8_t *rawImg, uint8_t **compressedImg, unsigned
 	}
 
 	jpeg_finish_compress( &m_cinfo_comp );
-	delete[] rawImg;
 }
 }
 }

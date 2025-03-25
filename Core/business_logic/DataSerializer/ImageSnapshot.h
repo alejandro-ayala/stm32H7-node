@@ -34,6 +34,7 @@ public:
     std::unique_ptr<uint8_t[]> m_imgBuffer;
     uint32_t m_imgSize;
     uint32_t m_timestamp;
+
 private:
     friend void to_json(nlohmann::json& j, const ImageSnapshot& image)
     {

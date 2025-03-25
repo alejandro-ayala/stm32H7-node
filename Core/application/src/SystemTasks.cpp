@@ -6,7 +6,7 @@
 
 namespace application
 {
-
+volatile bool transmisionOnGoing = false;
 SystemTasks::SystemTasks(const std::shared_ptr<business_logic::Communication::CommunicationManager>& commMng, const std::shared_ptr<business_logic::DataHandling::ImageCapturer>& imageCapturer, const std::shared_ptr<business_logic::ClockSyncronization::SharedClockSlaveManager>& sharedClkMng)
 {
 	uint32_t queueItemSize   = sizeof(business_logic::DataSerializer::ImageSnapshot);
@@ -42,9 +42,7 @@ void SystemTasks::edgeDetection(void* argument)
 	auto sharedClkMng  = taskArg->sharedClkMng;
 	const auto periodTimeCaptureImage = 10000;
 	const auto delayCameraStartup     = 1000;
-	LOG_INFO("SystemTasks::edgeDetection started");
-    size_t freeHeapSize = xPortGetFreeHeapSize();
-    size_t minEverFreeHeapSize = xPortGetMinimumEverFreeHeapSize();
+
 
 	imageCapturer->initialize();
 	m_dataHandlingTaskHandler->delayUntil(delayCameraStartup);
@@ -52,34 +50,45 @@ void SystemTasks::edgeDetection(void* argument)
 	auto edges   = std::make_shared<std::vector<uint8_t>>(imgBufferSize);
 	/* USER CODE BEGIN 5 */
 	/* Infinite loop */
-    freeHeapSize = xPortGetFreeHeapSize();
-    minEverFreeHeapSize = xPortGetMinimumEverFreeHeapSize();
+    size_t freeHeapSize = xPortGetFreeHeapSize();
+    size_t minEverFreeHeapSize = xPortGetMinimumEverFreeHeapSize();
+    const std::string startMsg = "SystemTasks::edgeDetection started --> freeHeapSize: " + std::to_string(freeHeapSize) + " minEverFreeHeapSize " + std::to_string(minEverFreeHeapSize);
+    LOG_INFO(startMsg);
 	for(;;)
 	{
-		LOG_TRACE("SystemTasks::edgeDetection captureImage");
-		imageCapturer->captureImage();
-		const auto captureTimestamp = sharedClkMng->getTimeReference().toNs();
-		imageCapturer->extractImage();
-
-		const uint8_t* rawImgBuffer = imageCapturer->getRawImageBuffer();
-		size_t bufferSize = imageCapturer->getRawImageBufferSize();
-
-		freeHeapSize = xPortGetFreeHeapSize();
-		minEverFreeHeapSize = xPortGetMinimumEverFreeHeapSize();
-
-		auto edgesPtr = edges->data();
-		const auto edgeCompressedImgSize = 3500;//imageCapturer->processEdges(rawImgBuffer, edgesPtr, bufferSize);
-		static uint8_t captureId = 0;
-		business_logic::DataSerializer::ImageSnapshot edgesSnapshot{captureId, 0x00, edgesPtr, edgeCompressedImgSize, captureTimestamp};
-		captureId++;
-		if(captureId == 4) captureId = 0;
-		const auto isInserted = m_capturesQueue->sendToBack(( void * ) &edgesSnapshot);
-		LOG_TRACE("SystemTasks::edgeDetection captureImage INSERTED to queue");
-		if(!isInserted)
+		if(transmisionOnGoing == false)
 		{
-			LOG_ERROR("Failed to insert snapshot");
+			transmisionOnGoing = true;
+			size_t freeHeapSize = xPortGetFreeHeapSize();
+			size_t minEverFreeHeapSize = xPortGetMinimumEverFreeHeapSize();
+			const std::string freeHeapMsg = "SystemTasks::edgeDetection captureImage freeHeapSize: " + std::to_string(freeHeapSize) + " minEverFreeHeapSize " + std::to_string(minEverFreeHeapSize);
+			LOG_INFO(freeHeapMsg);
+			imageCapturer->captureImage();
+			const auto captureTimestamp = sharedClkMng->getTimeReference().toNs();
+			imageCapturer->extractImage();
+
+			const uint8_t* rawImgBuffer = imageCapturer->getRawImageBuffer();
+			size_t bufferSize = imageCapturer->getRawImageBufferSize();
+
+			freeHeapSize = xPortGetFreeHeapSize();
+			minEverFreeHeapSize = xPortGetMinimumEverFreeHeapSize();
+
+			auto edgesPtr = edges->data();
+			const auto edgeCompressedImgSize = imageCapturer->processEdges(rawImgBuffer, edgesPtr, bufferSize);
+			static uint8_t captureId = 0;
+			business_logic::DataSerializer::ImageSnapshot edgesSnapshot{captureId, 0x00, edgesPtr, edgeCompressedImgSize, captureTimestamp};
+			captureId++;
+			if(captureId == 4) captureId = 0;
+			auto ptrImg = edgesSnapshot.m_imgBuffer.get();
+			const auto isInserted = m_capturesQueue->sendToBack(( void * ) &edgesSnapshot);
+			LOG_TRACE("SystemTasks::edgeDetection captureImage INSERTED to queue");
+			if(!isInserted)
+			{
+				LOG_ERROR("Failed to insert snapshot");
+			}
+			LOG_TRACE("SystemTasks::edgeDetection captureImage done");
+
 		}
-		LOG_TRACE("SystemTasks::edgeDetection captureImage done");
 		m_dataHandlingTaskHandler->delay(periodTimeCaptureImage);
 	}
 	/* USER CODE END 5 */
@@ -90,40 +99,72 @@ void SystemTasks::sendData(void* argument)
 	auto commMng = std::make_shared<business_logic::Communication::CommunicationManager>(*static_cast<business_logic::Communication::CommunicationManager*>(argument));
 
 	const auto sendDataPeriod = 1000;
-	LOG_INFO("SystemTasks::sendData started");
+    size_t freeHeapSize = xPortGetFreeHeapSize();
+    size_t minEverFreeHeapSize = xPortGetMinimumEverFreeHeapSize();
+    const std::string startMsg = "SystemTasks::sendData started --> freeHeapSize: " + std::to_string(freeHeapSize) + " minEverFreeHeapSize " + std::to_string(minEverFreeHeapSize);
+    LOG_INFO(startMsg);
 	/* USER CODE BEGIN 5 */
 	/* Infinite loop */
+
 	for(;;)
 	{
 		const auto pendingMsgs = isPendingData();
 		if(isPendingData())
 		{
+		    size_t freeHeapSize = xPortGetFreeHeapSize();
+		    size_t minEverFreeHeapSize = xPortGetMinimumEverFreeHeapSize();
+		    const std::string freeHeapMsg = "SystemTasks::sendData freeHeapSize: " + std::to_string(freeHeapSize) + " minEverFreeHeapSize " + std::to_string(minEverFreeHeapSize);
+		    LOG_INFO(freeHeapMsg);
 			LOG_DEBUG("Sending image information to master node. PendingMSg: ", std::to_string(pendingMsgs));
 			business_logic::DataSerializer::ImageSnapshot nextSnapshot;
 			getNextImage(nextSnapshot);
+			auto ptrImgDeque = nextSnapshot.m_imgBuffer.get();
 			LOG_TRACE(" PendingMSg after getNextImage: ", isPendingData());
-			for(size_t i = 0; i < (nextSnapshot.m_imgSize / MAXIMUN_CBOR_BUFFER_SIZE); i++)
-		    {
-				business_logic::DataSerializer::ImageSnapshot cborImgChunk{nextSnapshot.m_msgId, i, nextSnapshot.m_imgBuffer.get() + (i*MAXIMUN_CBOR_BUFFER_SIZE), MAXIMUN_CBOR_BUFFER_SIZE, nextSnapshot.m_timestamp};
-		    	const auto ptrImgChunkBuffer = cborImgChunk.m_imgBuffer.get();
-				std::vector<uint8_t> cborSerializedChunk;
-		        m_dataSerializer->serialize(cborImgChunk, cborSerializedChunk);
+			for (size_t i = 0; i < nextSnapshot.m_imgSize; i += MAXIMUN_CBOR_BUFFER_SIZE) {
+			    // Calculamos el tamaño del chunk (para el último fragmento puede ser menor a 128 bytes)
+				size_t chunkSize = std::min(static_cast<size_t>(MAXIMUN_CBOR_BUFFER_SIZE), static_cast<size_t>(nextSnapshot.m_imgSize - i));
 
-				std::string cborStr;
-				for(const auto& element : cborSerializedChunk)
-					cborStr += std::to_string(element) + " ";
-				LOG_INFO(cborStr);
+			    // Copiar el chunk en un buffer
+			    std::vector<uint8_t> destinationBuffer(chunkSize);
+			    std::memcpy(destinationBuffer.data(), nextSnapshot.m_imgBuffer.get() + i, chunkSize);
 
-		        const auto ptrSerializedMsg = cborSerializedChunk.data();
-		        const auto serializedMsgSize = cborSerializedChunk.size();
+/*
+			    // Log para verificar el contenido del chunk (opcional)
+			    std::ostringstream chunkLog;
+			    chunkLog << "Chunk [" << (i / MAXIMUN_CBOR_BUFFER_SIZE) << "]: ";
+			    for (size_t j = 0; j < chunkSize; j++) {
+			        chunkLog << std::to_string(destinationBuffer[j]) << " ";
+			    }
+			    LOG_INFO(chunkLog.str());
+*/
+			    //Crear estructura a serializar
+			    uint8_t msgIndex = static_cast<uint8_t>(i / MAXIMUN_CBOR_BUFFER_SIZE);
+			    auto chunkBuffer = std::make_unique<uint8_t[]>(chunkSize);
+			    std::memcpy(chunkBuffer.get(), destinationBuffer.data(), chunkSize);
+			    business_logic::DataSerializer::ImageSnapshot chunkSnapshot(
+			    	nextSnapshot.m_msgId,
+			        msgIndex,
+			        chunkBuffer.get(),
+			        chunkSize,
+					nextSnapshot.m_timestamp
+			    );
 
-		        std::vector<business_logic::Communication::CanMsg> canMsgChunks;
-		        const auto cborIndex = (nextSnapshot.m_msgId << 6) | (i & 0x3F);
-		        splitCborToCanMsgs(cborIndex, cborSerializedChunk, canMsgChunks);
-//				generateCanMsgsTest(cborIndex, cborSerializedChunk, canMsgChunks);
-				commMng->sendData(canMsgChunks);
-		    }
+			    std::ostringstream chunkLog;
+			    chunkLog << "Chunk [" << static_cast<int>(msgIndex) << "]: ";
+			    for (size_t j = 0; j < chunkSize; j++) {
+			        chunkLog << std::to_string(destinationBuffer[j]) << " ";
+			    }
+			    LOG_INFO(chunkLog.str());
+
+			    //Serializar el buffer de 128bytes
+			    std::vector<uint8_t> cborSerializedChunk;
+			    m_dataSerializer->serializeMsg(chunkSnapshot, cborSerializedChunk);
+
+
+			}
+
 			LOG_DEBUG("Sending image information to master node done");
+			//transmisionOnGoing = false;
 		}
 		m_commTaskHandler->delayUntil(sendDataPeriod);
 	}
@@ -135,7 +176,10 @@ void SystemTasks::syncronizationGlobalClock(void* argument)
 	auto sharedClkMng = std::make_shared<business_logic::ClockSyncronization::SharedClockSlaveManager>(*static_cast<business_logic::ClockSyncronization::SharedClockSlaveManager*>(argument));
 
 	const auto syncClkPeriod = 15000;
-	LOG_INFO("SystemTasks::syncronizationGlobalClock started");
+    size_t freeHeapSize = xPortGetFreeHeapSize();
+    size_t minEverFreeHeapSize = xPortGetMinimumEverFreeHeapSize();
+    const std::string startMsg = "SystemTasks::syncronizationGlobalClock started --> freeHeapSize: " + std::to_string(freeHeapSize) + " minEverFreeHeapSize " + std::to_string(minEverFreeHeapSize);
+    LOG_INFO(startMsg);
 	/* USER CODE BEGIN 5 */
 	/* Infinite loop */
 	for(;;)

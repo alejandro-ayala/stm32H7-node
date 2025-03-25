@@ -19,7 +19,7 @@ namespace DataHandling
 ImageCapturer::ImageCapturer(const std::shared_ptr<hardware_abstraction::Devices::ICameraDevice>& cameraControl) : m_cameraControl(cameraControl)
 {
 	m_imageConfig = m_cameraControl->getImageResolution();
-	m_pic   = new uint8_t[m_imageConfig.imageWidth * m_imageConfig.imageHeight];
+	m_pic = std::make_unique<uint8_t[]>(m_imageConfig.imageWidth * m_imageConfig.imageHeight);
 	if(m_pic == nullptr)
 	{
 		LOG_FATAL("Memory allocation for m_pic failed");
@@ -35,7 +35,6 @@ ImageCapturer::ImageCapturer(const std::shared_ptr<hardware_abstraction::Devices
 
 ImageCapturer::~ImageCapturer()
 {
-    delete[] m_pic;
 }
 
 void ImageCapturer::initialize()
@@ -59,7 +58,7 @@ void ImageCapturer::extractImage()
         const size_t jpegImgSize = m_cameraControl->getImageBufferSize();
         const uint8_t greyscale = 1;
 		//decodeJPEG(const_cast<uint8_t*>(bufferAddr), bufferSize, 1);
-		m_imageCompressor->decompress(const_cast<uint8_t*>(jpegImage), jpegImgSize, m_pic, m_picSize, greyscale, m_imageState);
+		m_imageCompressor->decompress(const_cast<uint8_t*>(jpegImage), jpegImgSize, m_pic.get(), m_picSize, greyscale, m_imageState);
 	}
 	else
 	{
@@ -75,7 +74,7 @@ void ImageCapturer::stop()
 
 const uint8_t* ImageCapturer::getRawImageBuffer() const
 {
-    return m_pic;
+    return m_pic.get();
 }
 
 size_t ImageCapturer::getRawImageBufferSize() const
@@ -105,11 +104,11 @@ unsigned long ImageCapturer::processEdges(const  uint8_t* image, uint8_t*& edges
 		}
 	}
 #else
-	memcpy(m_pic, edges, size);
+	memcpy(m_pic.get(), edges, size);
 	std::memset(edges, 0, size);
 
 	unsigned long compressedSize = 0;
-	m_imageCompressor->compress(m_pic, &edges, &compressedSize, m_imageConfig.imageQuality, m_imageState);
+	m_imageCompressor->compress(m_pic.get(), &edges, &compressedSize, m_imageConfig.imageQuality, m_imageState);
 	LOG_DEBUG("Compressed edges image with");
 //	business_logic::DataSerializer::ImageSnapshot edgesSnapshot2;
 //	business_logic::DataSerializer::ImageSnapshot *pxPointerToxMessage = nullptr;

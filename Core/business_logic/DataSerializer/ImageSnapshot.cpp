@@ -11,8 +11,9 @@ namespace DataSerializer
 ImageSnapshot::ImageSnapshot(uint8_t msgId, uint8_t msgIndex, uint8_t* msgBuffer, uint32_t imgSize, uint32_t timestamp) : m_msgId(msgId), m_msgIndex(msgIndex), m_imgSize(imgSize), m_timestamp(timestamp), m_imgBuffer(std::make_unique<uint8_t[]>(imgSize))
 {
 	BUSINESS_LOGIC_ASSERT( m_imgBuffer != nullptr, services::BusinessLogicErrorId::MemoryAllocationFailed, "Can not allocate memory for image snapshot msg");
-	//std::copy(msgBuffer + imgSize*msgIndex, (msgBuffer + imgSize*msgIndex) + imgSize, this->m_imgBuffer);
 	std::copy(msgBuffer, msgBuffer + imgSize, m_imgBuffer.get());
+	//TODO comprobar si es mas rapido
+	//std::memcpy(m_imgBuffer.get(), msgBuffer, imgSize);
 }
 
 ImageSnapshot& ImageSnapshot::operator=(ImageSnapshot&& other) noexcept
@@ -27,16 +28,49 @@ ImageSnapshot& ImageSnapshot::operator=(ImageSnapshot&& other) noexcept
     return *this;
 }
 
+//void ImageSnapshot::serialize(std::vector<uint8_t>& serializeData) const
+//{
+//    try
+//    {
+//        nlohmann::json j = *this;
+//        serializeData = nlohmann::json::to_cbor(j);
+//    }
+//    catch (const std::exception& e)
+//    {
+//
+//    }
+//}
 void ImageSnapshot::serialize(std::vector<uint8_t>& serializeData) const
 {
     try
     {
-        nlohmann::json j = *this;
+    	{
+        // Creamos el objeto JSON manualmente
+        nlohmann::json j;
+
+        j["msgId"] = m_msgId;
+        j["msgIndex"] = m_msgIndex;
+        j["imgSize"] = m_imgSize;
+        j["timestamp"] = m_timestamp;
+
+        // Convertimos el buffer a un vector de bytes
+        if (m_imgBuffer && m_imgSize > 0)
+        {
+            std::vector<uint8_t> imgBufferVector(m_imgBuffer.get(), m_imgBuffer.get() + m_imgSize);
+            j["imgBuffer"] = imgBufferVector;
+        }
+        else
+        {
+            j["imgBuffer"] = nullptr;
+        }
+
+        // Serializamos a CBOR directamente
         serializeData = nlohmann::json::to_cbor(j);
+    	}
     }
     catch (const std::exception& e)
     {
-
+        LOG_ERROR("Error serializando ImageSnapshot a CBOR: {}", e.what());
     }
 }
 
