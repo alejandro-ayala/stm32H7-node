@@ -44,14 +44,19 @@ const char* QueueHandler::getName() const
 	return pcQueueGetName(m_queue);
 }
 
-bool QueueHandler::sendToBack(const void * itemToQueue)
+//bool QueueHandler::sendToBack(const void * itemToQueue)
+//{
+//	auto status = true;
+//	if( xQueueSendToBack( m_queue, itemToQueue, static_cast<TickType_t>(0) ) != pdPASS )
+//	{
+//		status = false;
+//	}
+//	return status;
+//}
+bool QueueHandler::sendToBack(const std::shared_ptr<business_logic::DataSerializer::ImageSnapshot>& itemToQueue)
 {
-	auto status = true;
-	if( xQueueSendToBack( m_queue, itemToQueue, static_cast<TickType_t>(0) ) != pdPASS )
-	{
-		status = false;
-	}
-	return status;
+    auto itemPtr = new std::shared_ptr<business_logic::DataSerializer::ImageSnapshot>(itemToQueue);
+    return xQueueSendToBack(m_queue, &itemPtr, static_cast<TickType_t>(0)) == pdPASS;
 }
 
 bool QueueHandler::sendToBack(const void * itemToQueue, uint32_t timeout)
@@ -79,16 +84,29 @@ void QueueHandler::sendToFront(const void * itemToQueue, uint32_t timeout)
 	xQueueSendToFront( m_queue, itemToQueue, static_cast<TickType_t>(timeout));
 }
 
-bool QueueHandler::receive(void *rxBuffer)
+//bool QueueHandler::receive(void *rxBuffer)
+//{
+//	auto isReceived = false;
+//	if(xQueueReceive( m_queue, rxBuffer,static_cast<TickType_t>(portMAX_DELAY) ) == pdPASS )
+//	{
+//		isReceived = true;
+//		/* xRxedStructure now contains a copy of xMessage. */
+//	}
+//
+//	return isReceived;
+//}
+bool QueueHandler::receive(std::shared_ptr<business_logic::DataSerializer::ImageSnapshot>& rxBuffer)
 {
-	auto isReceived = false;
-	if(xQueueReceive( m_queue, rxBuffer,static_cast<TickType_t>(portMAX_DELAY) ) == pdPASS )
-	{
-		isReceived = true;
-		/* xRxedStructure now contains a copy of xMessage. */
-	}
+    std::shared_ptr<business_logic::DataSerializer::ImageSnapshot>* itemPtr = nullptr;
 
-	return isReceived;
+    if (xQueueReceive(m_queue, &itemPtr, static_cast<TickType_t>(portMAX_DELAY)) == pdPASS)
+    {
+        // Transferimos la propiedad del shared_ptr
+        rxBuffer = std::move(*itemPtr);
+        delete itemPtr;  // Limpiamos el puntero crudo
+        return true;
+    }
+    return false;
 }
 
 bool QueueHandler::receive(void *rxBuffer, uint32_t timeout)

@@ -8,12 +8,14 @@ namespace business_logic
 namespace DataSerializer
 {
 
-ImageSnapshot::ImageSnapshot(uint8_t msgId, uint8_t msgIndex, uint8_t* msgBuffer, uint32_t imgSize, uint32_t timestamp) : m_msgId(msgId), m_msgIndex(msgIndex), m_imgSize(imgSize), m_timestamp(timestamp), m_imgBuffer(std::make_unique<uint8_t[]>(imgSize))
+ImageSnapshot::ImageSnapshot(uint8_t msgId, uint8_t msgIndex, std::shared_ptr<uint8_t[]> msgBuffer, uint32_t msgSize, uint32_t timestamp)
+							: m_msgId(msgId),
+							  m_msgIndex(msgIndex),
+							  m_imgBuffer(std::move(msgBuffer)),  // Transferimos la propiedad
+							  m_imgSize(msgSize),
+							  m_timestamp(timestamp)
 {
-	BUSINESS_LOGIC_ASSERT( m_imgBuffer != nullptr, services::BusinessLogicErrorId::MemoryAllocationFailed, "Can not allocate memory for image snapshot msg");
-	std::copy(msgBuffer, msgBuffer + imgSize, m_imgBuffer.get());
-	//TODO comprobar si es mas rapido
-	//std::memcpy(m_imgBuffer.get(), msgBuffer, imgSize);
+
 }
 
 ImageSnapshot& ImageSnapshot::operator=(ImageSnapshot&& other) noexcept
