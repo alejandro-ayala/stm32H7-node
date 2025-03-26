@@ -44,15 +44,6 @@ const char* QueueHandler::getName() const
 	return pcQueueGetName(m_queue);
 }
 
-//bool QueueHandler::sendToBack(const void * itemToQueue)
-//{
-//	auto status = true;
-//	if( xQueueSendToBack( m_queue, itemToQueue, static_cast<TickType_t>(0) ) != pdPASS )
-//	{
-//		status = false;
-//	}
-//	return status;
-//}
 bool QueueHandler::sendToBack(const std::shared_ptr<business_logic::DataSerializer::ImageSnapshot>& itemToQueue)
 {
     auto itemPtr = new std::shared_ptr<business_logic::DataSerializer::ImageSnapshot>(itemToQueue);
@@ -84,17 +75,6 @@ void QueueHandler::sendToFront(const void * itemToQueue, uint32_t timeout)
 	xQueueSendToFront( m_queue, itemToQueue, static_cast<TickType_t>(timeout));
 }
 
-//bool QueueHandler::receive(void *rxBuffer)
-//{
-//	auto isReceived = false;
-//	if(xQueueReceive( m_queue, rxBuffer,static_cast<TickType_t>(portMAX_DELAY) ) == pdPASS )
-//	{
-//		isReceived = true;
-//		/* xRxedStructure now contains a copy of xMessage. */
-//	}
-//
-//	return isReceived;
-//}
 bool QueueHandler::receive(std::shared_ptr<business_logic::DataSerializer::ImageSnapshot>& rxBuffer)
 {
     std::shared_ptr<business_logic::DataSerializer::ImageSnapshot>* itemPtr = nullptr;
