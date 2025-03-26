@@ -13,7 +13,7 @@ class ImageSnapshot : public ISerializableMessage
 {
 public:
 	ImageSnapshot() = default;
-	ImageSnapshot(uint8_t msgId, uint8_t m_msgIndex, uint8_t* msgBuffer, uint32_t msgSize, uint32_t timestamp);
+	ImageSnapshot(uint8_t msgId, uint8_t msgIndex, std::shared_ptr<uint8_t[]> msgBuffer, uint32_t msgSize, uint32_t timestamp);
 	~ImageSnapshot() = default;
 	ImageSnapshot(const ImageSnapshot&) = delete;  // Deshabilitar copia
 	ImageSnapshot& operator=(const ImageSnapshot&) = delete;  // Deshabilitar asignación por copia
@@ -31,10 +31,9 @@ public:
 //private:
     uint8_t  m_msgId;
     uint8_t  m_msgIndex;
-    std::unique_ptr<uint8_t[]> m_imgBuffer;
+    std::shared_ptr<uint8_t[]> m_imgBuffer;
     uint32_t m_imgSize;
     uint32_t m_timestamp;
-
 private:
     friend void to_json(nlohmann::json& j, const ImageSnapshot& image)
     {
