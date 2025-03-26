@@ -26,17 +26,13 @@ public:
 	void resetQueue();
 	void removeQueue();
 	const char* getName() const;
-	//bool sendToBack(const void * itemToQueue);
 	bool sendToBack(const std::shared_ptr<business_logic::DataSerializer::ImageSnapshot>& itemToQueue);
 	bool sendToBack(const void * itemToQueue, uint32_t timeout);
 	void sendToBackOverwrite(const void * itemToQueue);
 	void sendToFront(const void * itemToQueue);
 	void sendToFront(const void * itemToQueue, uint32_t timeout);
-
-	//bool receive(void *rxBuffer);
 	bool receive(std::shared_ptr<business_logic::DataSerializer::ImageSnapshot>& rxBuffer);
 	bool receive(void *rxBuffer, uint32_t timeout);
-
 	bool peek(void *rxBuffer);
 	bool peek(void *rxBuffer, uint32_t timeout);
 	uint32_t getStoredMsg() const;
