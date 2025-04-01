@@ -12,15 +12,15 @@ namespace Controllers
 class CanController : public IController
 {
 private:
-	FDCAN_HandleTypeDef hfdcan1;
+	FDCAN_HandleTypeDef& m_hfdcan1;
+
 	FDCAN_FilterTypeDef sFilterConfig;
-	FDCAN_TxHeaderTypeDef txHeader;
 	FDCAN_RxHeaderTypeDef rxHeader;
 	int deviceId;
 	std::shared_ptr<business_logic::Osal::MutexHandler> canMutex;
 
 public:
-	CanController();
+	CanController(FDCAN_HandleTypeDef& hfdcan1);
 	virtual ~CanController();
 
 	virtual void initialize() override;

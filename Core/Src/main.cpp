@@ -58,7 +58,7 @@ using namespace hardware_abstraction::Devices;
 
 DCMI_HandleTypeDef hdcmi;
 DMA_HandleTypeDef hdma_dcmi;
-
+FDCAN_HandleTypeDef hfdcan1;
 I2C_HandleTypeDef hi2c1;
 
 UART_HandleTypeDef huart3;
@@ -97,7 +97,7 @@ static void createApplicationLayerComponents();
 /* USER CODE BEGIN 0 */
 void createHardwareAbstractionLayerComponents()
 {
-	cancontroller    = std::make_shared<CanController>();
+	cancontroller    = std::make_shared<CanController>(hfdcan1);
 	i2cController    = std::make_shared<I2CController>(&hi2c1);
 	cameraController = std::make_shared<Ov2640Ctrl>(CameraConfiguration{hdcmi, hdma_dcmi, i2cController, CameraResolution::RES_320X240});
 	LOG_INFO("Successful createHardwareAbstractionLayerComponents");
