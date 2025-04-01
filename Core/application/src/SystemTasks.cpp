@@ -156,14 +156,14 @@ void SystemTasks::sendData(void* argument)
 					chunkSize,
 			        nextSnapshot->m_timestamp
 			    );
-
+/*
 			    std::ostringstream chunkLog;
 			    chunkLog << "Chunk [" << static_cast<int>(msgIndex) << "]: ";
 			    for (size_t j = 0; j < chunkSize; j++) {
 			        chunkLog << std::to_string(chunkBuffer[j]) << " ";
 			    }
-			    LOG_INFO(chunkLog.str());
-
+			    LOG_TRACE(chunkLog.str());
+*/
 			    //Serializar el buffer de 128bytes
 			    std::vector<uint8_t> cborSerializedChunk;
 			    m_dataSerializer->serializeMsg(chunkSnapshot, cborSerializedChunk);
