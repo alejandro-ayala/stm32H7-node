@@ -1,5 +1,5 @@
 #include "STM32Timer.h"
-
+#include "services/Logger/LoggerMacros.h"
 
 namespace hardware_abstraction {
 namespace Controllers {
@@ -37,6 +37,9 @@ void STM32Timer::initialize() {
 	  {
 	    //Error_Handler();
 	  }
+	  HAL_TIM_Base_MspInit(&htim);
+
+	  timer_freq = HAL_RCC_GetPCLK1Freq();
 }
 
 void STM32Timer::startTimer() {
@@ -56,19 +59,23 @@ void STM32Timer::restartTimer() {
 }
 
 uint64_t STM32Timer::getCurrentTicks() {
-	return __HAL_TIM_GET_COUNTER(&htim);
+	//auto ticks = __HAL_TIM_GET_COUNTER(&htim);
+	TickType_t ticks = xTaskGetTickCount();
+	return ticks;
 }
 
 double STM32Timer::getCurrentSec() {
-	return static_cast<double>(getCurrentTicks()) / timer_freq;
+	auto seconds = static_cast<double>(getCurrentTicks()) / configTICK_RATE_HZ;
+	return seconds;
 }
 
 double STM32Timer::getCurrentUsec() {
-	return getCurrentSec() * 1e6;
+	return (1e6 * getCurrentTicks()) / configTICK_RATE_HZ;
 }
 
 double STM32Timer::getCurrentNsec() {
-	return getCurrentSec() * 1e9;
+	auto currentNs = (1e9 * getCurrentTicks()) / configTICK_RATE_HZ;
+	return currentNs;
 }
 
 }

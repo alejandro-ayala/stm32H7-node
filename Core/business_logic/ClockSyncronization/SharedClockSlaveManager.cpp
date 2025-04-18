@@ -25,7 +25,7 @@ void SharedClockSlaveManager::initialization()
 }
 
 
-bool SharedClockSlaveManager::getGlobalTime()
+bool SharedClockSlaveManager::synqGlobalTime()
 {
 	uint8_t cnt = 0;
 	uint8_t lenght = 800;
@@ -66,7 +66,7 @@ bool SharedClockSlaveManager::getGlobalTime()
 
 			uint64_t currentGT = timeController->getLocalTime();
 			uint64_t newGT = (globalTimeStamp.seconds * 1e9) + globalTimeStamp.nanoseconds;
-			LOG_TRACE("newGT: ", newGT,  "currentGT: ",  currentGT);
+			LOG_TRACE("SharedClockSlaveManager::setGlobalTimeReference newGT: ", newGT,  "currentGT: ",  currentGT);
 			timeController->setGlobalTimeReference(globalTimeStamp);
 			updatedTime = true;
 		}
@@ -90,6 +90,11 @@ bool SharedClockSlaveManager::getGlobalTime()
 TimeStamp SharedClockSlaveManager::getTimeReference() const
 {
 	return globalTimeStamp;
+}
+
+uint64_t SharedClockSlaveManager::getLocalTimeReference() const
+{
+	return timeController->getLocalTime();
 }
 }
 }

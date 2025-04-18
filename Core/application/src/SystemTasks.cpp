@@ -41,7 +41,7 @@ void SystemTasks::edgeDetection(void* argument)
 	auto taskArg = static_cast<TaskParams*>(argument);
 	auto imageCapturer = taskArg->imageCapturer;//std::make_shared<business_logic::DataHandling::ImageCapturer>(*static_cast<business_logic::DataHandling::ImageCapturer*>(taskArg->imageCapturer.get()));
 	auto sharedClkMng  = taskArg->sharedClkMng;
-	const auto periodTimeCaptureImage = 10000;
+	const auto periodTimeCaptureImage = 5000;
 	const auto delayCameraStartup     = 1000;
 
 
@@ -54,7 +54,7 @@ void SystemTasks::edgeDetection(void* argument)
     size_t freeHeapSize = xPortGetFreeHeapSize();
     size_t minEverFreeHeapSize = xPortGetMinimumEverFreeHeapSize();
     const std::string startMsg = "SystemTasks::edgeDetection started --> freeHeapSize: " + std::to_string(freeHeapSize) + " minEverFreeHeapSize " + std::to_string(minEverFreeHeapSize);
-    LOG_INFO(startMsg);
+    LOG_TRACE(startMsg);
 
 	for(;;)
 	{
@@ -64,9 +64,9 @@ void SystemTasks::edgeDetection(void* argument)
 			size_t freeHeapSize = xPortGetFreeHeapSize();
 			size_t minEverFreeHeapSize = xPortGetMinimumEverFreeHeapSize();
 			const std::string freeHeapMsg = "SystemTasks::edgeDetection captureImage freeHeapSize: " + std::to_string(freeHeapSize) + " minEverFreeHeapSize " + std::to_string(minEverFreeHeapSize);
-			LOG_INFO(freeHeapMsg);
+			LOG_TRACE(freeHeapMsg);
 			imageCapturer->captureImage();
-			const auto captureTimestamp = sharedClkMng->getTimeReference().toNs();
+			const auto captureTimestamp = sharedClkMng->getLocalTimeReference();
 			imageCapturer->extractImage();
 
 			const uint8_t* rawImgBuffer = imageCapturer->getRawImageBuffer();
@@ -86,7 +86,7 @@ void SystemTasks::edgeDetection(void* argument)
 			);
 
 			captureId++;
-			if(captureId == 4) captureId = 0;
+			if(captureId == 255) captureId = 0;
 			auto ptrImg = edgesSnapshot->m_imgBuffer.get();
 			const auto isInserted = m_capturesQueue->sendToBack(edgesSnapshot);
 			if(!isInserted)
@@ -96,7 +96,7 @@ void SystemTasks::edgeDetection(void* argument)
 			else
 				LOG_TRACE("SystemTasks::edgeDetection captureImage INSERTED to queue");
 
-			LOG_TRACE("SystemTasks::edgeDetection captureImage done");
+			LOG_INFO("SystemTasks::edgeDetection captureImage done at: ", captureTimestamp);
 
 		}
 		m_dataHandlingTaskHandler->delay(periodTimeCaptureImage);
@@ -112,7 +112,7 @@ void SystemTasks::sendData(void* argument)
     size_t freeHeapSize = xPortGetFreeHeapSize();
     size_t minEverFreeHeapSize = xPortGetMinimumEverFreeHeapSize();
     const std::string startMsg = "SystemTasks::sendData started --> freeHeapSize: " + std::to_string(freeHeapSize) + " minEverFreeHeapSize " + std::to_string(minEverFreeHeapSize);
-    LOG_INFO(startMsg);
+    LOG_DEBUG(startMsg);
 	/* USER CODE BEGIN 5 */
 	/* Infinite loop */
 
@@ -125,7 +125,7 @@ void SystemTasks::sendData(void* argument)
 		    size_t freeHeapSize = xPortGetFreeHeapSize();
 		    size_t minEverFreeHeapSize = xPortGetMinimumEverFreeHeapSize();
 		    const std::string freeHeapMsg = "SystemTasks::sendData freeHeapSize: " + std::to_string(freeHeapSize) + " minEverFreeHeapSize " + std::to_string(minEverFreeHeapSize);
-		    LOG_INFO(freeHeapMsg);
+		    LOG_TRACE(freeHeapMsg);
 			LOG_DEBUG("Sending image information to master node. PendingMSg: ", std::to_string(pendingMsgs));
 			//business_logic::DataSerializer::ImageSnapshot nextSnapshot;
 			getNextImage(nextSnapshot);
@@ -188,20 +188,22 @@ void SystemTasks::sendData(void* argument)
 void SystemTasks::syncronizationGlobalClock(void* argument)
 {
 	auto sharedClkMng = std::make_shared<business_logic::ClockSyncronization::SharedClockSlaveManager>(*static_cast<business_logic::ClockSyncronization::SharedClockSlaveManager*>(argument));
+	sharedClkMng->initialization();
 
-	const auto syncClkPeriod = 15000;
+	const auto syncClkPeriod = 5000;
     size_t freeHeapSize = xPortGetFreeHeapSize();
     size_t minEverFreeHeapSize = xPortGetMinimumEverFreeHeapSize();
     const std::string startMsg = "SystemTasks::syncronizationGlobalClock started --> freeHeapSize: " + std::to_string(freeHeapSize) + " minEverFreeHeapSize " + std::to_string(minEverFreeHeapSize);
-    LOG_INFO(startMsg);
+    LOG_DEBUG(startMsg);
 	/* USER CODE BEGIN 5 */
 	/* Infinite loop */
 	for(;;)
 	{
-		const bool isTimeUpdated = sharedClkMng->getGlobalTime();
+		const bool isTimeUpdated = sharedClkMng->synqGlobalTime();
 		if(isTimeUpdated)
 		{
 			const auto updatedTime = sharedClkMng->getTimeReference().toNs();
+			const auto localTime   = sharedClkMng->getLocalTimeReference();
 			LOG_INFO("SystemTasks::syncronizationGlobalClock Updated global master time: ", updatedTime);
 		}
 		m_clockSyncTaskHandler->delay(syncClkPeriod);

@@ -8,7 +8,7 @@ namespace Controllers {
 class STM32Timer : public ITimer {
 private:
     TIM_HandleTypeDef htim;
-    uint32_t timer_freq;     // Frecuencia del timer
+    uint32_t timer_freq;
     uint32_t prescaler;
     uint32_t period;
 

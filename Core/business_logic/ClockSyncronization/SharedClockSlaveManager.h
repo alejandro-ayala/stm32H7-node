@@ -20,8 +20,9 @@ public:
 	SharedClockSlaveManager(std::shared_ptr<TimeController> timecontroller, std::shared_ptr<hardware_abstraction::Controllers::CanController> cancontroller);
 	~SharedClockSlaveManager();
 	void initialization();
-	bool getGlobalTime();
+	bool synqGlobalTime();
 	TimeStamp getTimeReference() const;
+	uint64_t getLocalTimeReference() const;
 };
 }
 }

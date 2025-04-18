@@ -8,7 +8,7 @@ namespace business_logic
 namespace DataSerializer
 {
 
-ImageSnapshot::ImageSnapshot(uint8_t msgId, uint8_t msgIndex, std::shared_ptr<uint8_t[]> msgBuffer, uint32_t msgSize, uint32_t timestamp)
+ImageSnapshot::ImageSnapshot(uint8_t msgId, uint8_t msgIndex, std::shared_ptr<uint8_t[]> msgBuffer, uint32_t msgSize, uint64_t timestamp)
 							: m_msgId(msgId),
 							  m_msgIndex(msgIndex),
 							  m_imgBuffer(std::move(msgBuffer)),  // Transferimos la propiedad
