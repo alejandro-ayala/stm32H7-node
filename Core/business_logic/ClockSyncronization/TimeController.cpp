@@ -1,6 +1,7 @@
 #include "../ClockSyncronization/TimeController.h"
 #include "hardware_abstraction/Controllers/TIMER/STM32Timer.h"
 #include "services/Logger/LoggerMacros.h"
+#include "services/Exception/SystemExceptions.h"
 
 using namespace hardware_abstraction::Controllers;
 namespace business_logic
