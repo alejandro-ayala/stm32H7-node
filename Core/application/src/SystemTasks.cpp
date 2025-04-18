@@ -7,6 +7,8 @@
 namespace application
 {
 volatile bool transmisionOnGoing = false;
+volatile bool clockSynq = false;
+
 SystemTasks::SystemTasks(const std::shared_ptr<business_logic::Communication::CommunicationManager>& commMng, const std::shared_ptr<business_logic::DataHandling::ImageCapturer>& imageCapturer, const std::shared_ptr<business_logic::ClockSyncronization::SharedClockSlaveManager>& sharedClkMng)
 {
 	uint32_t queueItemSize   = sizeof(std::shared_ptr<business_logic::DataSerializer::ImageSnapshot>);
@@ -41,7 +43,7 @@ void SystemTasks::edgeDetection(void* argument)
 	auto taskArg = static_cast<TaskParams*>(argument);
 	auto imageCapturer = taskArg->imageCapturer;//std::make_shared<business_logic::DataHandling::ImageCapturer>(*static_cast<business_logic::DataHandling::ImageCapturer*>(taskArg->imageCapturer.get()));
 	auto sharedClkMng  = taskArg->sharedClkMng;
-	const auto periodTimeCaptureImage = 5000;
+	const auto periodTimeCaptureImage = 1000;
 	const auto delayCameraStartup     = 1000;
 
 
@@ -58,7 +60,7 @@ void SystemTasks::edgeDetection(void* argument)
 
 	for(;;)
 	{
-		if(transmisionOnGoing == false)
+		if(clockSynq && transmisionOnGoing == false)
 		{
 			transmisionOnGoing = true;
 			size_t freeHeapSize = xPortGetFreeHeapSize();
@@ -190,7 +192,7 @@ void SystemTasks::syncronizationGlobalClock(void* argument)
 	auto sharedClkMng = std::make_shared<business_logic::ClockSyncronization::SharedClockSlaveManager>(*static_cast<business_logic::ClockSyncronization::SharedClockSlaveManager*>(argument));
 	sharedClkMng->initialization();
 
-	const auto syncClkPeriod = 5000;
+	const auto syncClkPeriod = 1000;
     size_t freeHeapSize = xPortGetFreeHeapSize();
     size_t minEverFreeHeapSize = xPortGetMinimumEverFreeHeapSize();
     const std::string startMsg = "SystemTasks::syncronizationGlobalClock started --> freeHeapSize: " + std::to_string(freeHeapSize) + " minEverFreeHeapSize " + std::to_string(minEverFreeHeapSize);
@@ -205,6 +207,7 @@ void SystemTasks::syncronizationGlobalClock(void* argument)
 			const auto updatedTime = sharedClkMng->getTimeReference().toNs();
 			const auto localTime   = sharedClkMng->getLocalTimeReference();
 			LOG_INFO("SystemTasks::syncronizationGlobalClock Updated global master time: ", updatedTime);
+			clockSynq = true;
 		}
 		m_clockSyncTaskHandler->delay(syncClkPeriod);
 	}
