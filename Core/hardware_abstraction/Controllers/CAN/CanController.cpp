@@ -101,14 +101,19 @@ int CanController::transmitMsg(uint8_t idMsg, const uint8_t *txMsg, uint8_t data
 
 	auto fifoSpace = HAL_FDCAN_GetTxFifoFreeLevel(&m_hfdcan1);
 
-	if(fifoSpace < 3)LOG_WARNING("CanController::transmitMsg fifoSpace is almost full ");
-	else LOG_INFO("CanController::transmitMsg fifoSpace: ", std::to_string(fifoSpace));
-
+//	if(fifoSpace < 2)
+//	{
+//		LOG_WARNING("CanController::transmitMsg fifoSpace is almost full: ", std::to_string(fifoSpace));
+//	}
+//	else LOG_TRACE("CanController::transmitMsg fifoSpace: ", std::to_string(fifoSpace));
+	uint8_t waitForSpace = 0;
 	while(fifoSpace == 0)
 	{
-		LOG_ERROR("CanController::transmitMsg fifoSpace is full ");
-		HAL_Delay(50);
+		if(waitForSpace > 5)
+			LOG_ERROR("CanController::transmitMsg fifoSpace is full. Retry: ", std::to_string(waitForSpace));
+		HAL_Delay(5);
 		fifoSpace = HAL_FDCAN_GetTxFifoFreeLevel(&m_hfdcan1);
+		waitForSpace++;
 	}
 
 	if (HAL_FDCAN_AddMessageToTxFifoQ(&m_hfdcan1, &l_txHeader, txMsg) != HAL_OK)

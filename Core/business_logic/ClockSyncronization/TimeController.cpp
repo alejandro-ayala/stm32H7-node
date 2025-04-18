@@ -1,5 +1,6 @@
 #include "../ClockSyncronization/TimeController.h"
 #include "hardware_abstraction/Controllers/TIMER/STM32Timer.h"
+#include "services/Logger/LoggerMacros.h"
 
 using namespace hardware_abstraction::Controllers;
 namespace business_logic
@@ -19,6 +20,7 @@ TimeController::~TimeController()
 void TimeController::initialize()
 {
 	restartTimer();
+	selfTest();
 	initialized = true;
 }
 
@@ -77,24 +79,18 @@ uint64_t TimeController::getLocalTime()
 
 bool TimeController::selfTest()
 {
-	bool elapsed = false;
-	double elapsedTime, currentNs,currentNs2 ;
+	double t1,t2,t3 ;
 	internalTimer->restartTimer();
-	currentNs   = internalTimer->getCurrentNsec();
-	while(1)
+	t1   = internalTimer->getCurrentSec();
+	HAL_Delay(1000);
+	t2   = internalTimer->getCurrentSec();
+	HAL_Delay(1000);
+	t3   = internalTimer->getCurrentSec();
+	if((((t2 - t1) < 0.9) || ((t2 - t1) > 1.1)) || (((t3 - t1) < 1.9) || ((t2 - t1) > 2.1)))
 	{
-		if(elapsed==true)
-		{
-			internalTimer->stopTimer();
-			elapsed = false;
-			currentNs2   = internalTimer->getCurrentNsec();
-			internalTimer->restartTimer();
-			currentNs   = internalTimer->getCurrentNsec();
-
-		}
-
+		THROW_BUSINESS_LOGIC_EXCEPTION(services::BusinessLogicErrorId::TimeControllerInitialization, "TimeController::selfTest failed");
 	}
-
+	return true;
 }
 }
 }
