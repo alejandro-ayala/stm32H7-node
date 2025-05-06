@@ -14,6 +14,7 @@ public:
 	virtual ~ICommunication(){};
 
 	virtual void send(const std::string&) = 0;
+	virtual void sendBuffer(const uint8_t* buff, uint8_t size) = 0;
 	virtual void receive(std::string&, uint32_t waitResponse = 2000)    = 0;
 };
 }

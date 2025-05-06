@@ -74,12 +74,17 @@ void ImageCapturer::stop()
 
 const uint8_t* ImageCapturer::getRawImageBuffer() const
 {
-    return m_pic.get();
+    return m_cameraControl->getImageBuffer();
 }
 
 size_t ImageCapturer::getRawImageBufferSize() const
 {
     return m_picSize;
+}
+
+size_t ImageCapturer::getImageSize() const
+{
+    return m_cameraControl->getImageSize();
 }
 
 unsigned long ImageCapturer::processEdges(const  uint8_t* image, uint8_t*& edges, size_t size)

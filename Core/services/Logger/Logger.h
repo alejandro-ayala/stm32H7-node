@@ -44,6 +44,7 @@ public:
 	template<typename... Args>
 	void log(LogLevel logLevel , const Args&... args)
 	{
+		m_logLevel = LogLevel::Info;
 		if((m_logLevel > logLevel) || m_disable) return;
 		const std::string msg = concatenateArgsToString(args...);
 		log(logLevel, msg);

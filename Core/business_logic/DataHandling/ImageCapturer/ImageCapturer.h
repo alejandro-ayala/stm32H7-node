@@ -34,6 +34,7 @@ public:
 	void captureImage();
 	void extractImage();
 	size_t getRawImageBufferSize() const;
+	size_t getImageSize() const;
 	const uint8_t* getRawImageBuffer() const;
 	unsigned long processEdges(const uint8_t* image, uint8_t*& edges, size_t size);
 	uint32_t getBufferSize() const;

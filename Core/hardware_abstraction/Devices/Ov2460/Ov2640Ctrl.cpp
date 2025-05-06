@@ -88,8 +88,8 @@ void Ov2640Ctrl::captureSnapshot()
 	HAL_DCMI_Stop(&m_hdcmi);
 
 
-	const auto imgSize = processCapture();
-	LOG_INFO("Image size:", imgSize, " bytes");
+	m_imageSize = processCapture();
+	LOG_INFO("Image size:", m_imageSize, " bytes");
 }
 
 uint32_t Ov2640Ctrl::processCapture()
@@ -138,6 +138,11 @@ const uint8_t* Ov2640Ctrl::getImageBuffer() const
 size_t Ov2640Ctrl::getImageBufferSize() const
 {
     return m_frameBufferSize;
+}
+
+size_t Ov2640Ctrl::getImageSize() const
+{
+    return m_imageSize;
 }
 
 CameraResolution Ov2640Ctrl::getImageResolution() const

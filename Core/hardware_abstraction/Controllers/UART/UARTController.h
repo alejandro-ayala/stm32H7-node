@@ -20,6 +20,7 @@ public:
 
 	void initialize()                     override;
 	void send(const std::string& command) override;
+	void sendBuffer(const uint8_t* buff, uint8_t size) override;
 	void receive(std::string& response, uint32_t waitResponse = 2000)   override;
 	bool selfTest()                       override;
 };

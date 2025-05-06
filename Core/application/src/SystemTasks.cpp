@@ -27,9 +27,9 @@ SystemTasks::SystemTasks(const std::shared_ptr<business_logic::Communication::Co
 void SystemTasks::createPoolTasks(const std::shared_ptr<business_logic::Communication::CommunicationManager>& commMng, const std::shared_ptr<business_logic::DataHandling::ImageCapturer>& imageCapturer, const std::shared_ptr<business_logic::ClockSyncronization::SharedClockSlaveManager>& sharedClkMng)
 {
 	try {
-		m_clockSyncTaskHandler    = std::make_shared<business_logic::Osal::TaskHandler>(SystemTasks::syncronizationGlobalClock, "syncronizationGlobalClockTask", DefaultPriorityTask +2, static_cast<business_logic::Osal::VoidPtr>(sharedClkMng.get()), 4096);
+		//m_clockSyncTaskHandler    = std::make_shared<business_logic::Osal::TaskHandler>(SystemTasks::syncronizationGlobalClock, "syncronizationGlobalClockTask", DefaultPriorityTask +2, static_cast<business_logic::Osal::VoidPtr>(sharedClkMng.get()), 4096);
 		m_dataHandlingTaskHandler = std::make_shared<business_logic::Osal::TaskHandler>(SystemTasks::edgeDetection, "edgeDetection", DefaultPriorityTask + 1, static_cast<business_logic::Osal::VoidPtr>(&m_taskParam), 4096);
-		m_commTaskHandler         = std::make_shared<business_logic::Osal::TaskHandler>(SystemTasks::sendData, "sendDataTask", DefaultPriorityTask, static_cast<business_logic::Osal::VoidPtr>(commMng.get()), 4096);
+		//m_commTaskHandler         = std::make_shared<business_logic::Osal::TaskHandler>(SystemTasks::sendData, "sendDataTask", DefaultPriorityTask, static_cast<business_logic::Osal::VoidPtr>(commMng.get()), 4096);
 
 	} catch (...)
 	{
@@ -43,7 +43,7 @@ void SystemTasks::edgeDetection(void* argument)
 	auto taskArg = static_cast<TaskParams*>(argument);
 	auto imageCapturer = taskArg->imageCapturer;//std::make_shared<business_logic::DataHandling::ImageCapturer>(*static_cast<business_logic::DataHandling::ImageCapturer*>(taskArg->imageCapturer.get()));
 	auto sharedClkMng  = taskArg->sharedClkMng;
-	const auto periodTimeCaptureImage = 3000;
+	const auto periodTimeCaptureImage = 5000;
 	const auto delayCameraStartup     = 1000;
 
 
@@ -57,51 +57,31 @@ void SystemTasks::edgeDetection(void* argument)
     size_t minEverFreeHeapSize = xPortGetMinimumEverFreeHeapSize();
     const std::string startMsg = "SystemTasks::edgeDetection started --> freeHeapSize: " + std::to_string(freeHeapSize) + " minEverFreeHeapSize " + std::to_string(minEverFreeHeapSize);
     LOG_TRACE(startMsg);
-
+    int i = 0;
 	for(;;)
 	{
-		if(clockSynq && transmisionOnGoing == false)
-		{
+
 			transmisionOnGoing = true;
 			size_t freeHeapSize = xPortGetFreeHeapSize();
 			size_t minEverFreeHeapSize = xPortGetMinimumEverFreeHeapSize();
-			const std::string freeHeapMsg = "SystemTasks::edgeDetection captureImage freeHeapSize: " + std::to_string(freeHeapSize) + " minEverFreeHeapSize " + std::to_string(minEverFreeHeapSize);
-			LOG_TRACE(freeHeapMsg);
 			imageCapturer->captureImage();
-			const auto captureTimestamp = sharedClkMng->getLocalTimeReference();
-			imageCapturer->extractImage();
-
 			const uint8_t* rawImgBuffer = imageCapturer->getRawImageBuffer();
-			size_t bufferSize = imageCapturer->getRawImageBufferSize();
+			size_t bufferSize = imageCapturer->getImageSize();
 
-			freeHeapSize = xPortGetFreeHeapSize();
-			minEverFreeHeapSize = xPortGetMinimumEverFreeHeapSize();
 
-			auto edgesPtr = edges->data();
-			const auto edgeCompressedImgSize = imageCapturer->processEdges(rawImgBuffer, edgesPtr, bufferSize);
-			auto edgesBuffer = std::shared_ptr<uint8_t[]>(new uint8_t[edgeCompressedImgSize]);
-			std::memcpy(edgesBuffer.get(), edgesPtr, edgeCompressedImgSize);
-			static uint8_t captureId = 0;
+//			std::string imgStr;
+//			imgStr.reserve(bufferSize);
+//			LOG_INFO("Capturing img: ", std::to_string(imgIdx), "with size: ", std::to_string(bufferSize));
+//			for(int i=0;i<bufferSize;i++)
+//			{
+//				std::string imgStr = std::to_string(rawImgBuffer[i]) + " " ;
+//				LOG_FATAL(imgStr);
+//
+//			}
+//			imgIdx++;
 
-			auto edgesSnapshot = std::make_shared<business_logic::DataSerializer::ImageSnapshot>(
-			    captureId, 0x00, edgesBuffer, edgeCompressedImgSize, captureTimestamp
-			);
-
-			captureId++;
-			if(captureId == 255) captureId = 0;
-			auto ptrImg = edgesSnapshot->m_imgBuffer.get();
-			const auto isInserted = m_capturesQueue->sendToBack(edgesSnapshot);
-			if(!isInserted)
-			{
-				LOG_ERROR("Failed to insert snapshot");
-			}
-			else
-				LOG_TRACE("SystemTasks::edgeDetection captureImage INSERTED to queue");
-
-			LOG_INFO("SystemTasks::edgeDetection captureImage done at: ", captureTimestamp);
-
-		}
 		m_dataHandlingTaskHandler->delay(periodTimeCaptureImage);
+		i++;
 	}
 	/* USER CODE END 5 */
 }

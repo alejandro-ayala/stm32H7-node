@@ -51,6 +51,11 @@ void UARTController::send(const std::string& command)
 	}
 }
 
+void UARTController::sendBuffer(const uint8_t* buff, uint8_t size)
+{
+	const auto state = HAL_UART_Transmit(&uartHandle, buff, size, blockingTime);
+}
+
 bool UARTController::selfTest()
 {
 	return true;

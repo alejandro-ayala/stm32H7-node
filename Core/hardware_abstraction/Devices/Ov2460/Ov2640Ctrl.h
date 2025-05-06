@@ -17,6 +17,7 @@ private:
 
 	uint8_t m_frameBuffer[maxBufferSize] = { 0 };
 	size_t m_frameBufferSize;
+	size_t m_imageSize;
 	const uint32_t m_resolutionSize = 15534;
 	const uint8_t m_pid = 0x26;
 	const uint8_t m_version = 0x42;
@@ -45,6 +46,7 @@ public:
 
 	size_t getImageBufferSize() const final;
 	const uint8_t* getImageBuffer() const final;
+	size_t getImageSize() const;
 	CameraResolution getImageResolution() const final;
 
 	void startContinuousCapture() final;

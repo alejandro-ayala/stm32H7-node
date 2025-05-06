@@ -57,6 +57,14 @@ void Logger::initialize()
 void Logger::log(LogLevel logLevel, const std::string& msg)
 {
 	std::string logMsg;
+	if(logLevel == LogLevel::Critical)
+	{
+	    uartMutex->lock();
+	    outSink->sendBuffer(reinterpret_cast<const uint8_t*>(msg.c_str()), msg.size());
+		uartMutex->unlock();
+	}
+	else
+	{
     switch (logLevel)
     {
     case LogLevel::Trace: logMsg = "[TRACE] " + msg; break;
@@ -66,11 +74,12 @@ void Logger::log(LogLevel logLevel, const std::string& msg)
 	case LogLevel::Error: logMsg = "[ERROR] " + msg; break;
     case LogLevel::Critical: logMsg = "[CRITICAL] " + msg; break;
     default: THROW_SERVICES_EXCEPTION(ServicesErrorId::LoggerUnknownLevel, "Unknown logging level")
-
     }
+
     uartMutex->lock();
 	outSink->send(logMsg);
 	uartMutex->unlock();
+	}
 }
 
 void Logger::setLogLevel(LogLevel logLevel)

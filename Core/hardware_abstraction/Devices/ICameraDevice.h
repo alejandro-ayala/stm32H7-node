@@ -19,6 +19,7 @@ public:
 	virtual void configuration(CameraResolution resolution) = 0;
 	virtual void captureSnapshot() = 0;
 
+	virtual size_t getImageSize() const = 0;
 	virtual size_t getImageBufferSize() const = 0;
 	virtual const uint8_t* getImageBuffer() const = 0;
 	virtual void startContinuousCapture() = 0;
