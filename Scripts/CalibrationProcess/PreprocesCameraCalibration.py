@@ -35,7 +35,7 @@ def process_hex_txt_file(filepath):
         print(f"[ERROR] No se pudo abrir la imagen en {filepath}: {e}")
         return
 
-    image.show()
+    #image.show()
 
     output_path = os.path.splitext(filepath)[0] + '.jpeg'
     try:
