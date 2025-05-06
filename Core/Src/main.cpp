@@ -1,3 +1,61 @@
+//#define TENSORFLOW_LITE
+
+#ifdef TENSORFLOW_LITE
+#include "main.h"
+#include "string.h"
+#include "cmsis_os.h"
+#include "libjpeg.h"
+
+
+#include "tensorflow/lite/micro/examples/person_detection/main_functions.h"
+
+#include "tensorflow/lite/micro/examples/person_detection/detection_responder.h"
+#include "tensorflow/lite/micro/examples/person_detection/image_provider.h"
+#include "tensorflow/lite/micro/examples/person_detection/model_settings.h"
+#include "tensorflow/lite/micro/examples/person_detection/person_detect_model_data.h"
+#include "tensorflow/lite/micro/kernels/micro_ops.h"
+#include "tensorflow/lite/micro/micro_error_reporter.h"
+#include "tensorflow/lite/micro/micro_interpreter.h"
+#include "tensorflow/lite/micro/micro_mutable_op_resolver.h"
+#include "tensorflow/lite/schema/schema_generated.h"
+#include "tensorflow/lite/version.h"
+
+#include "tensorflow/lite/micro/examples/person_detection/main_functions.h"
+
+
+DCMI_HandleTypeDef hdcmi;
+DMA_HandleTypeDef hdma_dcmi;
+FDCAN_HandleTypeDef hfdcan1;
+I2C_HandleTypeDef hi2c1;
+
+UART_HandleTypeDef huart3;
+
+// Globals, used for compatibility with Arduino-style sketches.
+namespace {
+tflite::ErrorReporter* error_reporter = nullptr;
+const tflite::Model* model = nullptr;
+tflite::MicroInterpreter* interpreter = nullptr;
+TfLiteTensor* input = nullptr;
+
+// An area of memory to use for input, output, and intermediate arrays.
+constexpr int kTensorArenaSize = 93 * 1024;
+static uint8_t tensor_arena[kTensorArenaSize];
+}  // namespace
+
+
+
+// This is the default main used on systems that have the standard C entry
+// point. Other devices (for example FreeRTOS or ESP32) that have different
+// requirements for entry code (like an app_main function) should specialize
+// this main.cc file in a target-specific subfolder.
+int main(int argc, char* argv[]) {
+  setup();
+  while (true) {
+    loop();
+  }
+}
+#else
+
 /* USER CODE BEGIN Header */
 /**
   ******************************************************************************
@@ -539,3 +597,4 @@ void assert_failed(uint8_t *file, uint32_t line)
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
+#endif
