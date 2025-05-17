@@ -17,7 +17,7 @@ public:
 	ICameraDevice() = default;
 	~ICameraDevice() override = default;
 	virtual void configuration(CameraResolution resolution) = 0;
-	virtual void captureSnapshot() = 0;
+	virtual bool captureSnapshot() = 0;
 
 	virtual size_t getImageBufferSize() const = 0;
 	virtual const uint8_t* getImageBuffer() const = 0;

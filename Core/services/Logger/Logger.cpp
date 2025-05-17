@@ -88,5 +88,10 @@ void Logger::enable()
 	m_disable = false;
 }
 
+bool Logger::isLevelEnabled(LogLevel level) const
+{
+    return !m_disable && level >= m_logLevel;
+}
+
 } //namespace services
 

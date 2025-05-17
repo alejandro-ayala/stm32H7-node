@@ -15,7 +15,9 @@ class Ov2640Ctrl : public ICameraDevice
 {
 private:
 
+    //static inline __attribute__((section(".RAM_D2"), aligned(32))) uint8_t m_frameBuffer[maxBufferSize];
 	uint8_t m_frameBuffer[maxBufferSize] = { 0 };
+
 	size_t m_frameBufferSize;
 	const uint32_t m_resolutionSize = 15534;
 	const uint8_t m_pid = 0x26;
@@ -40,8 +42,9 @@ public:
 	virtual ~Ov2640Ctrl() = default;
 
     void initialization() final;
+    void initializationDCMI();
     void configuration(CameraResolution resolution) final;
-	void captureSnapshot() final;
+	bool captureSnapshot() final;
 
 	size_t getImageBufferSize() const final;
 	const uint8_t* getImageBuffer() const final;
@@ -52,6 +55,7 @@ public:
 	bool isCapturingFrame() const final;
 	void decodeCapture();
 	bool selfTest() final;
+	void onFrameCaptured();
 };
 }
 }

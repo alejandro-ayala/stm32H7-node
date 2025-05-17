@@ -22,10 +22,11 @@ void CommunicationManager::initialization()
 	//canController->initialize();
 }
 
-void CommunicationManager::sendData(const std::vector<business_logic::Communication::CanMsg>& dataToSend)
+void CommunicationManager::sendData(const std::vector<business_logic::Communication::CanMsg>& dataToSend, bool sendEndOfImage)
 {
     const uint8_t msgToSend = dataToSend.size();
 
+    uint8_t canMsgId = 0;
     for(int currentMsgIndex = 0; currentMsgIndex < msgToSend; currentMsgIndex++)
     {
 
@@ -34,6 +35,7 @@ void CommunicationManager::sendData(const std::vector<business_logic::Communicat
         uint8_t i = 0;
         data[i++] = frame.canMsgId;
         data[i++] = frame.canMsgIndex;
+        canMsgId = frame.canMsgId;
     	if(currentMsgIndex == (msgToSend - 1))
     	{
     		LOG_DEBUG("Last msg to send with a size: ", std::to_string(frame.payloadSize));
@@ -69,6 +71,19 @@ void CommunicationManager::sendData(const std::vector<business_logic::Communicat
         //TODO check and remove the delay
         //HAL_Delay(2);
     }
+    if(sendEndOfImage)LOG_DEBUG("CommunicationManager::sendData Sending end of Image");
+//Send end of frame:
+		uint8_t dataEndOfFrame[MAXIMUM_CAN_MSG_SIZE] = {0};
+		dataEndOfFrame[0] = canMsgId;
+		dataEndOfFrame[1] = 0x1E;
+		dataEndOfFrame[2] = 0x1E;
+		dataEndOfFrame[3] = 0x1E;
+		dataEndOfFrame[4] = 0x1E;
+		dataEndOfFrame[5] = 0x1E;
+		dataEndOfFrame[6] = 0x1E;
+		dataEndOfFrame[7] = sendEndOfImage;
+		canController->transmitMsg(static_cast<uint8_t>(CAN_IDs::IMAGE_DATA), dataEndOfFrame, MAXIMUM_CAN_MSG_SIZE);
+
 }
 
 void CommunicationManager::receiveData()
