@@ -56,7 +56,7 @@ using namespace hardware_abstraction::Devices;
 /* Private variables ---------------------------------------------------------*/
 
 
-DCMI_HandleTypeDef hdcmi;
+DCMI_HandleTypeDef hdcmi2;
 DMA_HandleTypeDef hdma_dcmi;
 FDCAN_HandleTypeDef hfdcan1;
 I2C_HandleTypeDef hi2c1;
@@ -83,7 +83,6 @@ static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_USB_OTG_HS_USB_Init(void);
-static void MX_DCMI_Init(void);
 static void MX_ETH_Init(void);
 void StartDefaultTask(void const * argument);
 
@@ -99,7 +98,7 @@ void createHardwareAbstractionLayerComponents()
 {
 	cancontroller    = std::make_shared<CanController>(hfdcan1);
 	i2cController    = std::make_shared<I2CController>(&hi2c1);
-	cameraController = std::make_shared<Ov2640Ctrl>(CameraConfiguration{hdcmi, hdma_dcmi, i2cController, CameraResolution::RES_320X240});
+	cameraController = std::make_shared<Ov2640Ctrl>(CameraConfiguration{hdcmi2, hdma_dcmi, i2cController, CameraResolution::RES_320X240});
 	LOG_INFO("Successful createHardwareAbstractionLayerComponents");
 }
 
@@ -112,19 +111,6 @@ void createBusinessLogicLayerComponents()
 	LOG_INFO("Successful createBusinessLogicLayerComponents");
 }
 
-void getCaptureImage()
-{
-	const auto periodTimeCaptureImage = 2000;
-	imageCapturer->initialize();
-	/* USER CODE BEGIN 5 */
-	/* Infinite loop */
-	for(;;)
-	{
-	  imageCapturer->captureImage();
-	  HAL_Delay(periodTimeCaptureImage);
-	  imageCapturer->extractImage();
-	}
-}
 void createApplicationLayerComponents()
 {
 	systemTaskHandler = std::make_shared<application::SystemTasks>(commMng, imageCapturer, globalClkMng);
@@ -163,7 +149,6 @@ int main(void)
   MX_GPIO_Init();
   MX_DMA_Init();
   MX_USB_OTG_HS_USB_Init();
-  MX_DCMI_Init();
   MX_LIBJPEG_Init();
   LOG_INFO("Initialization application");
   /* USER CODE BEGIN 2 */
@@ -279,37 +264,6 @@ void SystemClock_Config(void)
   * @param None
   * @retval None
   */
-static void MX_DCMI_Init(void)
-{
-
-  /* USER CODE BEGIN DCMI_Init 0 */
-
-  /* USER CODE END DCMI_Init 0 */
-
-  /* USER CODE BEGIN DCMI_Init 1 */
-
-  /* USER CODE END DCMI_Init 1 */
-  hdcmi.Instance = DCMI;
-  hdcmi.Init.SynchroMode = DCMI_SYNCHRO_HARDWARE;
-  hdcmi.Init.PCKPolarity = DCMI_PCKPOLARITY_RISING;
-  hdcmi.Init.VSPolarity = DCMI_VSPOLARITY_LOW;
-  hdcmi.Init.HSPolarity = DCMI_HSPOLARITY_LOW;
-  hdcmi.Init.CaptureRate = DCMI_CR_ALL_FRAME;
-  hdcmi.Init.ExtendedDataMode = DCMI_EXTEND_DATA_8B;
-  hdcmi.Init.JPEGMode = DCMI_JPEG_ENABLE;
-  hdcmi.Init.ByteSelectMode = DCMI_BSM_ALL;
-  hdcmi.Init.ByteSelectStart = DCMI_OEBS_ODD;
-  hdcmi.Init.LineSelectMode = DCMI_LSM_ALL;
-  hdcmi.Init.LineSelectStart = DCMI_OELS_ODD;
-  if (HAL_DCMI_Init(&hdcmi) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN DCMI_Init 2 */
-
-  /* USER CODE END DCMI_Init 2 */
-
-}
 
 /**
   * @brief USART3 Initialization Function

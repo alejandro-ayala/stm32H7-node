@@ -19,6 +19,7 @@ namespace DataHandling
 ImageCapturer::ImageCapturer(const std::shared_ptr<hardware_abstraction::Devices::ICameraDevice>& cameraControl) : m_cameraControl(cameraControl)
 {
 	m_imageConfig = m_cameraControl->getImageResolution();
+#ifdef EDGE_DETECTION
 	m_pic = std::make_unique<uint8_t[]>(m_imageConfig.imageWidth * m_imageConfig.imageHeight);
 	if(m_pic == nullptr)
 	{
@@ -27,10 +28,13 @@ ImageCapturer::ImageCapturer(const std::shared_ptr<hardware_abstraction::Devices
 	}
 
 	m_edgeDetector = std::make_shared<EdgeDetector>(std::make_shared<SobelEdgeDetectorAlgorithm>(m_imageConfig));
-	//BUSINESS_LOGIC_ASSERT( m_capturesQueue->getAvailableSpace() != 0, services::BusinessLogicErrorId::QueueIsFull, "Queue to store the camera images is full");
-	m_imageEncoder   = std::make_shared<RLEEncoder>();
-
 	m_imageCompressor = std::make_shared<JpegCompressor>();
+#endif
+	//BUSINESS_LOGIC_ASSERT( m_capturesQueue->getAvailableSpace() != 0, services::BusinessLogicErrorId::QueueIsFull, "Queue to store the camera images is full");
+#ifdef RLE_ENCODER
+	m_imageEncoder   = std::make_shared<RLEEncoder>();
+#endif
+
 }
 
 ImageCapturer::~ImageCapturer()
@@ -43,13 +47,13 @@ void ImageCapturer::initialize()
 	m_cameraControl->configuration(hardware_abstraction::Devices::CameraResolution::RES_320X240);
 }
 
-void ImageCapturer::captureImage()
+bool ImageCapturer::captureImage()
 {
-	m_cameraControl->captureSnapshot();
+	return m_cameraControl->captureSnapshot();
 	//TODO add a time check for ensure that camera is not blocked during capture process.
 
 }
-
+#ifdef EDGE_DETECTION
 void ImageCapturer::extractImage()
 {
 	if(/*!m_cameraControl->isCapturingFrame()*/true)
@@ -65,13 +69,13 @@ void ImageCapturer::extractImage()
 		THROW_BUSINESS_LOGIC_EXCEPTION(services::BusinessLogicErrorId::CameraTimeout, "Camera timeout while capturing image");
 	}
 }
-
+#endif
 
 void ImageCapturer::stop()
 {
 	m_cameraControl->stopCapture();
 }
-
+#ifdef EDGE_DETECTION
 const uint8_t* ImageCapturer::getRawImageBuffer() const
 {
     return m_pic.get();
@@ -81,7 +85,17 @@ size_t ImageCapturer::getRawImageBufferSize() const
 {
     return m_picSize;
 }
+#endif
+const uint8_t* ImageCapturer::getJpegImageBuffer() const
+{
+    return m_cameraControl->getImageBuffer();
+}
 
+size_t ImageCapturer::getJpegImageBufferSize() const
+{
+    return m_cameraControl->getImageBufferSize();
+}
+#ifdef EDGE_DETECTION
 unsigned long ImageCapturer::processEdges(const  uint8_t* image, uint8_t*& edges, size_t size)
 {
 	m_edgeDetector->processImage(image, edges, size);
@@ -118,15 +132,18 @@ unsigned long ImageCapturer::processEdges(const  uint8_t* image, uint8_t*& edges
 	return compressedSize;
 #endif
 }
+#endif
 
 uint32_t ImageCapturer::getBufferSize() const
 {
 	return m_imageConfig;
 }
 
+#ifdef RLE_ENCODER
 void ImageCapturer::encodeEdgesImage(uint8_t* initialImage, const uint32_t initialImageSize , std::vector<RLEFrame>& encoded) const
 {
 	m_imageEncoder->encode(initialImage, initialImageSize, encoded);
 }
+#endif
 }
 }

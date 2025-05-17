@@ -9,7 +9,7 @@ namespace Devices
 
 struct CameraConfiguration
 {
-	DCMI_HandleTypeDef hdcmi;
+	DCMI_HandleTypeDef& dcmiHandler;
 	DMA_HandleTypeDef hdma_dcmi;
 	std::shared_ptr<Controllers::I2CController> hi2c2;
 	CameraResolution cameraResolution;

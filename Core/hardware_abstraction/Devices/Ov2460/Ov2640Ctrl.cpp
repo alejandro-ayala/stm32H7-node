@@ -5,28 +5,43 @@
 #include <string.h>
 #include <vector>
 #include "main.h"
-
+DCMI_HandleTypeDef hdcmi;
 namespace hardware_abstraction
 {
 namespace Devices
 {
+volatile bool frameCaptured;
 
-void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi)
+void CleanDCache_by_Addr(uint32_t* addr, uint32_t size)
 {
-	int a = 0;
-	a+4;
+    uint32_t alignedAddr = ((uint32_t)addr) & ~((uint32_t)0x1F);
+    uint32_t alignedSize = size + ((uint32_t)addr - alignedAddr);
 
-	//cameraController->stopCapture();
+    SCB_CleanDCache_by_Addr((uint32_t*)alignedAddr, alignedSize);
 }
 
-Ov2640Ctrl::Ov2640Ctrl(CameraConfiguration cfg) : m_hdcmi(cfg.hdcmi), m_hdma_dcmi(cfg.hdma_dcmi), m_i2cControl(cfg.hi2c2), m_imageResolution(cfg.cameraResolution)
+void InvalidateDCache_by_Addr(uint32_t* addr, uint32_t size)
+{
+    uint32_t alignedAddr = ((uint32_t)addr) & ~((uint32_t)0x1F);
+    uint32_t alignedSize = size + ((uint32_t)addr - alignedAddr);
+
+    SCB_InvalidateDCache_by_Addr((uint32_t*)alignedAddr, alignedSize);
+}
+//
+//extern "C" void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi)
+//{
+//	frameCaptured = true;
+//}
+
+Ov2640Ctrl::Ov2640Ctrl(CameraConfiguration cfg) : m_hdcmi(cfg.dcmiHandler), m_hdma_dcmi(cfg.hdma_dcmi), m_i2cControl(cfg.hi2c2), m_imageResolution(cfg.cameraResolution)
 {
 	m_isCapturingFrame = false;
-
 }
 
 void Ov2640Ctrl::initialization()
 {
+	//CleanDCache_by_Addr((uint32_t*)m_frameBuffer, m_resolutionSize);
+	initializationDCMI();
 	m_i2cControl->initialize();
 	HAL_GPIO_WritePin(CAMERA_RESET_GPIO_Port, CAMERA_RESET_Pin, GPIO_PIN_RESET);
 	HAL_Delay(100);
@@ -47,6 +62,39 @@ void Ov2640Ctrl::initialization()
 	// Stop DCMI clear buffer
 	stopCapture();
 	HAL_Delay(1000); //TODO check if needed
+}
+
+void Ov2640Ctrl::initializationDCMI(void)
+{
+
+  /* USER CODE BEGIN DCMI_Init 0 */
+
+  /* USER CODE END DCMI_Init 0 */
+
+  /* USER CODE BEGIN DCMI_Init 1 */
+
+  /* USER CODE END DCMI_Init 1 */
+  hdcmi.Instance = DCMI;
+  hdcmi.Init.SynchroMode = DCMI_SYNCHRO_HARDWARE;
+  hdcmi.Init.PCKPolarity = DCMI_PCKPOLARITY_RISING;
+  hdcmi.Init.VSPolarity = DCMI_VSPOLARITY_LOW;
+  hdcmi.Init.HSPolarity = DCMI_HSPOLARITY_LOW;
+  hdcmi.Init.CaptureRate = DCMI_CR_ALL_FRAME;
+  hdcmi.Init.ExtendedDataMode = DCMI_EXTEND_DATA_8B;
+  hdcmi.Init.JPEGMode = DCMI_JPEG_ENABLE;
+  hdcmi.Init.ByteSelectMode = DCMI_BSM_ALL;
+  hdcmi.Init.ByteSelectStart = DCMI_OEBS_ODD;
+  hdcmi.Init.LineSelectMode = DCMI_LSM_ALL;
+  hdcmi.Init.LineSelectStart = DCMI_OELS_ODD;
+  if (HAL_DCMI_Init(&hdcmi) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  //HAL_DCMI_RegisterCallback(&hdcmi, HAL_DCMI_FRAME_EVENT_CB_ID, HAL_DCMI_FrameEventCallback);
+  /* USER CODE BEGIN DCMI_Init 2 */
+
+  /* USER CODE END DCMI_Init 2 */
+
 }
 
 void Ov2640Ctrl::setRegistersConfiguration(const std::vector<std::pair<uint8_t, uint8_t>>& registerCfg)
@@ -78,24 +126,49 @@ void Ov2640Ctrl::configuration(CameraResolution resolution)
 	setRegistersConfiguration(OV2640_320x240_JPEG);
 }
 
-void Ov2640Ctrl::captureSnapshot()
+bool Ov2640Ctrl::captureSnapshot()
 {
-	std::fill(std::begin(m_frameBuffer), std::end(m_frameBuffer), 0);;
-	HAL_DCMI_Start_DMA(&m_hdcmi, DCMI_MODE_SNAPSHOT, (uint32_t)m_frameBuffer, m_resolutionSize);
-	//__HAL_DCMI_ENABLE_IT(&m_hdcmi, DCMI_IT_FRAME);
-	HAL_Delay(100);
-	HAL_DCMI_Suspend(&m_hdcmi);
-	HAL_DCMI_Stop(&m_hdcmi);
+	std::fill(std::begin(m_frameBuffer), std::end(m_frameBuffer), 0);
+	frameCaptured = false;
+	if ((hdcmi.Instance->CR & DCMI_CR_ENABLE) != 0)
+	{
+	    LOG_ERROR("DCMI still active!");
+	    HAL_DCMI_Stop(&hdcmi);
+	}
+	HAL_DCMI_Start_DMA(&hdcmi, DCMI_MODE_SNAPSHOT, (uint32_t)m_frameBuffer, maxBufferSize*0.8);
+	//__HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_FRAME);
 
+	HAL_Delay(2000);
+	frameCaptured = true;
+
+	uint32_t startTick = HAL_GetTick();
+	while (!frameCaptured)
+	{
+		if ((HAL_GetTick() - startTick) > 2000)  // timeout seguro
+		{
+			LOG_ERROR("Timeout waiting for frame capture");
+			//HAL_DCMI_Stop(&hdcmi);
+			//return false;
+		}
+	}
+
+	//InvalidateDCache_by_Addr((uint32_t*)m_frameBuffer, m_resolutionSize);
+	//HAL_DCMI_Suspend(&hdcmi);
+	HAL_DCMI_Stop(&hdcmi);
 
 	const auto imgSize = processCapture();
 	LOG_INFO("Image size:", imgSize, " bytes");
+	if(imgSize >= maxBufferSize)
+		return false;
+	else
+		return true;
 }
 
 uint32_t Ov2640Ctrl::processCapture()
 {
 	uint32_t bufferPointer = 0;
 	bool headerFound;
+	static int i=0;
 	m_frameBufferSize = 0;
 	while (1)
 	{
@@ -109,7 +182,7 @@ uint32_t Ov2640Ctrl::processCapture()
 				&& m_frameBuffer[bufferPointer + 1] == 0xD9)
 		{
 			bufferPointer = bufferPointer + 2;
-			LOG_TRACE("Found EOI of JPEG file");
+			LOG_DEBUG("Found EOI of JPEG file");
 			headerFound = false;
 
 			break;
@@ -121,8 +194,9 @@ uint32_t Ov2640Ctrl::processCapture()
 		}
 		bufferPointer++;
 	}
+	i++;
 	m_frameBufferSize = bufferPointer;
-    return bufferPointer;
+    return m_frameBufferSize;
 }
 
 bool Ov2640Ctrl::isCapturingFrame() const
@@ -159,13 +233,13 @@ void Ov2640Ctrl::startContinuousCapture()
 {
 	std::fill(std::begin(m_frameBuffer), std::end(m_frameBuffer), 0);
 	m_isCapturingFrame = true;
-	HAL_DCMI_Start_DMA(&m_hdcmi, DCMI_MODE_CONTINUOUS, (uint32_t)m_frameBuffer, m_resolutionSize);
+	HAL_DCMI_Start_DMA(&hdcmi, DCMI_MODE_CONTINUOUS, (uint32_t)m_frameBuffer, m_resolutionSize);
 }
 
 void Ov2640Ctrl::stopCapture()
 {
-    HAL_DCMI_Suspend(&m_hdcmi);
-    HAL_DCMI_Stop(&m_hdcmi);
+    HAL_DCMI_Suspend(&hdcmi);
+    HAL_DCMI_Stop(&hdcmi);
     m_isCapturingFrame = false;
 }
 

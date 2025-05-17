@@ -16,13 +16,18 @@ class ImageCapturer
 {
 private:
 	std::shared_ptr<hardware_abstraction::Devices::ICameraDevice> m_cameraControl;
+#ifdef EDGE_DETECTION
 	std::shared_ptr<EdgeDetector> m_edgeDetector;
 	std::shared_ptr<JpegCompressor> m_imageCompressor;
+#endif
+#ifdef RLE_ENCODER
 	std::shared_ptr<IEncoder> m_imageEncoder;
-
+#endif
+#ifdef EDGE_DETECTION
 	std::unique_ptr<uint8_t[]> m_pic;
 	ImageState m_imageState;
 	size_t m_picSize;
+#endif
 	ImageConfiguration m_imageConfig;
 
 public:
@@ -31,13 +36,19 @@ public:
 
     void initialize();
     void stop();
-	void captureImage();
+	bool captureImage();
+#ifdef EDGE_DETECTION
 	void extractImage();
+	unsigned long processEdges(const uint8_t* image, uint8_t*& edges, size_t size);
+#endif
+#ifdef EDGE_DETECTION
 	size_t getRawImageBufferSize() const;
 	const uint8_t* getRawImageBuffer() const;
-	unsigned long processEdges(const uint8_t* image, uint8_t*& edges, size_t size);
+#endif
 	uint32_t getBufferSize() const;
 	void encodeEdgesImage(uint8_t* initialImage, const uint32_t initialImageSize, std::vector<RLEFrame>& encoded ) const;
+	size_t getJpegImageBufferSize() const;
+	const uint8_t* getJpegImageBuffer() const;
 
 };
 }
