@@ -24,7 +24,7 @@ public:
 
 	void initialization();
 	void sendData(const std::vector<business_logic::Communication::CanMsg>& dataToSend, bool sendEndOfImage = false);
-	void receiveData(void);
+	bool waitingForConfirmation(void);
 	bool selfTest();
 
 };

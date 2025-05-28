@@ -97,7 +97,7 @@ int CanController::transmitMsg(uint8_t idMsg, const uint8_t *txMsg, uint8_t data
 	l_txHeader.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
 	l_txHeader.MessageMarker = 0x0;
 
-	canMutex->lock();
+	//canMutex->lock();
 
 	auto fifoSpace = HAL_FDCAN_GetTxFifoFreeLevel(&m_hfdcan1);
 
@@ -122,7 +122,7 @@ int CanController::transmitMsg(uint8_t idMsg, const uint8_t *txMsg, uint8_t data
 		return HAL_ERROR;
 	}
 
-	canMutex->unlock();
+	//canMutex->unlock();
 }
 
 business_logic::Communication::CanFrame CanController::receiveMsg()
@@ -130,7 +130,7 @@ business_logic::Communication::CanFrame CanController::receiveMsg()
 
 	business_logic::Communication::CanFrame rxMsg;
 	uint8_t rxBuffer[16];
-	canMutex->lock();
+	//canMutex->lock();
 	const auto pendingMsg = HAL_FDCAN_GetRxFifoFillLevel(&m_hfdcan1, FDCAN_RX_FIFO0);
 	if (pendingMsg >0)
 	{
@@ -139,7 +139,7 @@ business_logic::Communication::CanFrame CanController::receiveMsg()
 		rxMsg.dlc = rxHeader.DataLength;
 		memcpy( rxMsg.data , rxBuffer , rxHeader.DataLength);
 	}
-	canMutex->unlock();
+	//canMutex->unlock();
 	return rxMsg;
 }
 
