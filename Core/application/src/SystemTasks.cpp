@@ -187,7 +187,7 @@ void SystemTasks::sendData(void* argument)
 				while(!receivedConfirmation)
 				{
 					receivedConfirmation = commMng->waitingForConfirmation();
-					m_commTaskHandler->delay(5);
+					m_commTaskHandler->delay(1);
 				}
 
 			}
