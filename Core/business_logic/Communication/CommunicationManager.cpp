@@ -86,19 +86,19 @@ void CommunicationManager::sendData(const std::vector<business_logic::Communicat
 
 }
 
-void CommunicationManager::receiveData()
+bool CommunicationManager::waitingForConfirmation()
 {
 	uint8_t lenght = 800;
 	uint8_t data[lenght];
 	auto canMsg = canController->receiveMsg();
 	auto msgSize = canMsg.dlc;
-	if(msgSize > 0)
+	bool frameConfirmed = false;
+	if(msgSize > 0 && canMsg.id == static_cast<uint8_t>(CAN_IDs::FRAME_CONFIRMATION))
 	{
-		LOG_DEBUG("Received data:", msgSize, " bytes");
-//		IData parsedMsg;
-//		parsedMsg.deSerialize(data);
-		//LOG_DEBUG("newData[", parsedMsg.secCounter, " sec: ", parsedMsg.timestamp);
+		LOG_DEBUG("CommunicationManager::waitingForConfirmation received FRAME_CONFIRMATION");
+		frameConfirmed = true;
 	}
+	return frameConfirmed;
 }
 
 bool CommunicationManager::selfTest()

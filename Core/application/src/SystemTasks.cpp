@@ -43,7 +43,7 @@ void SystemTasks::edgeDetection(void* argument)
 	auto taskArg = static_cast<TaskParams*>(argument);
 	auto imageCapturer = taskArg->imageCapturer;//std::make_shared<business_logic::DataHandling::ImageCapturer>(*static_cast<business_logic::DataHandling::ImageCapturer*>(taskArg->imageCapturer.get()));
 	auto sharedClkMng  = taskArg->sharedClkMng;
-	const auto periodTimeCaptureImage = 30000;
+	const auto periodTimeCaptureImage = 5000;
 	const auto delayCameraStartup     = 1000;
 
 
@@ -117,7 +117,7 @@ void SystemTasks::edgeDetection(void* argument)
 
 				logMemoryUsage();
 				const auto executionTime = (xTaskGetTickCount() - t1) * portTICK_PERIOD_MS;
-				LOG_INFO("SystemTasks::edgeDetection captureImage executed at ", captureTimestamp, " -- executionTime:", std::to_string(executionTime));
+				LOG_DEBUG("SystemTasks::edgeDetection captureImage executed at ", captureTimestamp, " -- executionTime:", std::to_string(executionTime));
 			}
 			else
 			{
@@ -152,7 +152,7 @@ void SystemTasks::sendData(void* argument)
 		{
 			static int i=0;
 			logMemoryUsage();
-			LOG_INFO("Sending image information to master node. PendingMSg: ", std::to_string(pendingMsgs));
+			LOG_TRACE("Sending image information to master node. PendingMSg: ", std::to_string(pendingMsgs));
 			getNextImage(nextSnapshot);
 
 			//auto ptrImgDeque = nextSnapshot->m_imgBuffer.get();
@@ -183,6 +183,12 @@ void SystemTasks::sendData(void* argument)
 //				generateCanMsgsTest(cborIndex, cborSerializedChunk, canMsgChunks);
 		        bool isLastIteration = (i + MAXIMUN_CBOR_BUFFER_SIZE >= nextSnapshot->m_imgSize);
 				commMng->sendData(canMsgChunks, isLastIteration);
+				bool receivedConfirmation = false;
+				while(!receivedConfirmation)
+				{
+					receivedConfirmation = commMng->waitingForConfirmation();
+					m_commTaskHandler->delay(5);
+				}
 
 			}
 			const auto executionTime = (xTaskGetTickCount() - t1) * portTICK_PERIOD_MS;

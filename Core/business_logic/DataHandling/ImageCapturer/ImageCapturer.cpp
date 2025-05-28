@@ -45,6 +45,7 @@ void ImageCapturer::initialize()
 {
 	m_cameraControl->initialization();
 	m_cameraControl->configuration(hardware_abstraction::Devices::CameraResolution::RES_320X240);
+	LOG_DEBUG("ImageCapturer::initialize DONE");
 }
 
 bool ImageCapturer::captureImage()
