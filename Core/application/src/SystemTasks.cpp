@@ -43,7 +43,7 @@ void SystemTasks::edgeDetection(void* argument)
 	auto taskArg = static_cast<TaskParams*>(argument);
 	auto imageCapturer = taskArg->imageCapturer;//std::make_shared<business_logic::DataHandling::ImageCapturer>(*static_cast<business_logic::DataHandling::ImageCapturer*>(taskArg->imageCapturer.get()));
 	auto sharedClkMng  = taskArg->sharedClkMng;
-	const auto periodTimeCaptureImage = 5000;
+	const auto periodTimeCaptureImage = 1000;
 	const auto delayCameraStartup     = 1000;
 
 
