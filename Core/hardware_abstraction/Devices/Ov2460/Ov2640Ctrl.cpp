@@ -27,11 +27,11 @@ void InvalidateDCache_by_Addr(uint32_t* addr, uint32_t size)
 
     SCB_InvalidateDCache_by_Addr((uint32_t*)alignedAddr, alignedSize);
 }
-//
-//extern "C" void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi)
-//{
-//	frameCaptured = true;
-//}
+
+extern "C" void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi)
+{
+	frameCaptured = true;
+}
 
 Ov2640Ctrl::Ov2640Ctrl(CameraConfiguration cfg) : m_hdcmi(cfg.dcmiHandler), m_hdma_dcmi(cfg.hdma_dcmi), m_i2cControl(cfg.hi2c2), m_imageResolution(cfg.cameraResolution)
 {
@@ -136,15 +136,15 @@ bool Ov2640Ctrl::captureSnapshot()
 	    HAL_DCMI_Stop(&hdcmi);
 	}
 	HAL_DCMI_Start_DMA(&hdcmi, DCMI_MODE_SNAPSHOT, (uint32_t)m_frameBuffer, maxBufferSize*0.8);
-	//__HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_FRAME);
-
-	HAL_Delay(2000);
+//	__HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_FRAME);
+	//TODO review delay
+	HAL_Delay(100);
 	frameCaptured = true;
 
 	uint32_t startTick = HAL_GetTick();
 	while (!frameCaptured)
 	{
-		if ((HAL_GetTick() - startTick) > 2000)  // timeout seguro
+		if ((HAL_GetTick() - startTick) > 2000)
 		{
 			LOG_ERROR("Timeout waiting for frame capture");
 			//HAL_DCMI_Stop(&hdcmi);
