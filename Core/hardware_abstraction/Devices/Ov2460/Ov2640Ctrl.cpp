@@ -136,9 +136,9 @@ bool Ov2640Ctrl::captureSnapshot()
 	    HAL_DCMI_Stop(&hdcmi);
 	}
 	HAL_DCMI_Start_DMA(&hdcmi, DCMI_MODE_SNAPSHOT, (uint32_t)m_frameBuffer, maxBufferSize*0.8);
-//	__HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_FRAME);
+	__HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_FRAME);
 	//TODO review delay
-	HAL_Delay(100);
+	//HAL_Delay(100);
 	frameCaptured = true;
 
 	uint32_t startTick = HAL_GetTick();

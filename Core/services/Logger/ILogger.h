@@ -23,7 +23,7 @@ public:
 	ILogger() = default;
 	virtual ~ILogger() = default;
 	virtual void initialize() = 0;
-	virtual void log(LogLevel, const std::string&) = 0;
+	virtual void log(LogLevel level, const char* msg) = 0;
 	virtual void setLogLevel(LogLevel) = 0;
 	virtual void disable() = 0;
 	virtual void enable() = 0;
