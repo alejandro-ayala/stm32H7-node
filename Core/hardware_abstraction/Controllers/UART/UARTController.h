@@ -19,7 +19,7 @@ public:
 	virtual ~UARTController() = default;
 
 	void initialize()                     override;
-	void send(const std::string& command) override;
+	void send(const char* data, size_t size) override;
 	void receive(std::string& response, uint32_t waitResponse = 2000)   override;
 	bool selfTest()                       override;
 };

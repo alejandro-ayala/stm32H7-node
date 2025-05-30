@@ -36,19 +36,27 @@ void UARTController::receive(std::string& response, uint32_t waitResponse)
 	response.assign(reinterpret_cast<const char*>(buffer), rxBytes);
 }
 
-void UARTController::send(const std::string& command)
+void UARTController::send(const char* data, size_t size)
 {
-	uint32_t size = command.length();
-	uint8_t* data = (uint8_t*)(command.c_str());
-	data[size++] = '\r';
-	data[size++] = '\n';
-	data[size] = '\0';
-
-	const auto state = HAL_UART_Transmit(&uartHandle, data, size, blockingTime);
-	if(state)
-	{
-		//THROW_CONTROLLERS_EXCEPTION(services::UartTxError, "Uart controller sending error")
-	}
+    // Asegúrate de que data termina en '\0' si es necesario para tu hardware
+    // Si quieres agregar \r\n, puedes hacerlo aquí:
+    uint8_t buffer[512];
+    size_t len = size;
+    if (size + 2 < sizeof(buffer)) {
+        memcpy(buffer, data, size);
+        buffer[size++] = '\r';
+        buffer[size++] = '\n';
+        buffer[size] = '\0';
+        len = size;
+    } else {
+        // Si el mensaje es muy largo, solo copia lo que cabe
+        memcpy(buffer, data, sizeof(buffer) - 3);
+        buffer[sizeof(buffer) - 3] = '\r';
+        buffer[sizeof(buffer) - 2] = '\n';
+        buffer[sizeof(buffer) - 1] = '\0';
+        len = sizeof(buffer) - 1;
+    }
+    HAL_UART_Transmit(&uartHandle, buffer, len, blockingTime);
 }
 
 bool UARTController::selfTest()
