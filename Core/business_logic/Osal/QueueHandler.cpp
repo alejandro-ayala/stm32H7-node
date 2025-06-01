@@ -1,4 +1,6 @@
 #include "QueueHandler.h"
+#include "services/Exception/SystemExceptions.h"
+
 namespace business_logic
 {
 namespace Osal
@@ -16,7 +18,7 @@ QueueHandler::~QueueHandler()
 void QueueHandler::createQueue()
 {
 	m_queue = xQueueCreate( m_queueLength, m_itemSize );
-
+	BUSINESS_LOGIC_ASSERT( m_queue != nullptr, services::BusinessLogicErrorId::MemoryAllocationFailed, "QueueHandler::createQueue error");
     if( m_queue == NULL )
     {
         /* Queue was not created and must not be used. */
@@ -25,11 +27,15 @@ void QueueHandler::createQueue()
 
 void QueueHandler::deleteQueue()
 {
+	BUSINESS_LOGIC_ASSERT( m_queue != nullptr, services::BusinessLogicErrorId::MemoryAllocationFailed, "QueueHandler::deleteQueue error");
+
 	vQueueDelete(m_queue);
 }
 
 void QueueHandler::resetQueue()
 {
+	BUSINESS_LOGIC_ASSERT( m_queue != nullptr, services::BusinessLogicErrorId::MemoryAllocationFailed, "QueueHandler::resetQueue error");
+
 	xQueueReset(m_queue);
 }
 
@@ -47,12 +53,16 @@ const char* QueueHandler::getName() const
 bool QueueHandler::sendToBack(const std::shared_ptr<business_logic::DataSerializer::ImageSnapshot>& itemToQueue)
 {
     auto itemPtr = new std::shared_ptr<business_logic::DataSerializer::ImageSnapshot>(itemToQueue);
+	BUSINESS_LOGIC_ASSERT( m_queue != nullptr, services::BusinessLogicErrorId::MemoryAllocationFailed, "QueueHandler:sendToBack: error");
+
     return xQueueSendToBack(m_queue, &itemPtr, static_cast<TickType_t>(0)) == pdPASS;
 }
 
 bool QueueHandler::sendToBack(const void * itemToQueue, uint32_t timeout)
 {
 	auto status = true;
+	BUSINESS_LOGIC_ASSERT( m_queue != nullptr, services::BusinessLogicErrorId::MemoryAllocationFailed, "QueueHandler::sendToBack error");
+
 	if( xQueueSendToBack( m_queue, itemToQueue, static_cast<TickType_t>(timeout) ) != pdPASS )
 	{
 		status = false;
@@ -62,22 +72,29 @@ bool QueueHandler::sendToBack(const void * itemToQueue, uint32_t timeout)
 
 void QueueHandler::sendToBackOverwrite(const void * itemToQueue)
 {
+	BUSINESS_LOGIC_ASSERT( m_queue != nullptr, services::BusinessLogicErrorId::MemoryAllocationFailed, "QueueHandler::sendToBackOverwrite error");
+
 	xQueueOverwrite(m_queue, itemToQueue);
 }
 
 void QueueHandler::sendToFront(const void * itemToQueue)
 {
+	BUSINESS_LOGIC_ASSERT( m_queue != nullptr, services::BusinessLogicErrorId::MemoryAllocationFailed, "QueueHandler::sendToFront1 error");
+
 	xQueueSendToFront(m_queue, itemToQueue, static_cast<TickType_t>(0));
 }
 
 void QueueHandler::sendToFront(const void * itemToQueue, uint32_t timeout)
 {
+	BUSINESS_LOGIC_ASSERT( m_queue != nullptr, services::BusinessLogicErrorId::MemoryAllocationFailed, "QueueHandler::sendToFront error");
+
 	xQueueSendToFront( m_queue, itemToQueue, static_cast<TickType_t>(timeout));
 }
 
 bool QueueHandler::receive(std::shared_ptr<business_logic::DataSerializer::ImageSnapshot>& rxBuffer)
 {
     std::shared_ptr<business_logic::DataSerializer::ImageSnapshot>* itemPtr = nullptr;
+	BUSINESS_LOGIC_ASSERT( m_queue != nullptr, services::BusinessLogicErrorId::MemoryAllocationFailed, "QueueHandler::receive1 error");
 
     if (xQueueReceive(m_queue, &itemPtr, static_cast<TickType_t>(portMAX_DELAY)) == pdPASS)
     {
@@ -92,6 +109,8 @@ bool QueueHandler::receive(std::shared_ptr<business_logic::DataSerializer::Image
 bool QueueHandler::receive(void *rxBuffer, uint32_t timeout)
 {
 	auto isReceived = false;
+	BUSINESS_LOGIC_ASSERT( m_queue != nullptr, services::BusinessLogicErrorId::MemoryAllocationFailed, "QueueHandler::receive error");
+
 	if(xQueueReceive( m_queue, rxBuffer,static_cast<TickType_t>(timeout) ) == pdPASS )
 	{
 		isReceived = true;
@@ -103,6 +122,8 @@ bool QueueHandler::receive(void *rxBuffer, uint32_t timeout)
 bool QueueHandler::peek(void *rxBuffer)
 {
 	auto isReceived = false;
+	BUSINESS_LOGIC_ASSERT( m_queue != nullptr, services::BusinessLogicErrorId::MemoryAllocationFailed, "QueueHandler::peek2 error");
+
 	if( xQueuePeek( m_queue, rxBuffer, static_cast<TickType_t>(0)) )
 	{
 		isReceived = true;
@@ -115,6 +136,8 @@ bool QueueHandler::peek(void *rxBuffer)
 bool QueueHandler::peek(void *rxBuffer, uint32_t timeout)
 {
 	auto isReceived = false;
+	BUSINESS_LOGIC_ASSERT( m_queue != nullptr, services::BusinessLogicErrorId::MemoryAllocationFailed, "QueueHandler::peek error");
+
 	if( xQueuePeek( m_queue, rxBuffer, static_cast<TickType_t>(timeout)) )
 	{
 		isReceived = true;
@@ -126,11 +149,14 @@ bool QueueHandler::peek(void *rxBuffer, uint32_t timeout)
 
 uint32_t QueueHandler::getStoredMsg() const
 {
+	BUSINESS_LOGIC_ASSERT( m_queue != nullptr, services::BusinessLogicErrorId::MemoryAllocationFailed, "QueueHandler::getStoredMsg error");
+
 	return static_cast<uint32_t>(uxQueueMessagesWaiting(m_queue));
 }
 
 uint32_t QueueHandler::getAvailableSpace() const
 {
+	BUSINESS_LOGIC_ASSERT( m_queue != nullptr, services::BusinessLogicErrorId::MemoryAllocationFailed, "QueueHandler::getAvailableSpace error");
 	return static_cast<uint32_t>(uxQueueSpacesAvailable(m_queue));
 }
 }

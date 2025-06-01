@@ -5,18 +5,18 @@
 #include <memory>
 #include "../ICameraDevice.h"
 #include  "hardware_abstraction/Controllers/I2C/I2CController.h"
+
+static constexpr uint32_t maxBufferSize = 25000;
+extern __attribute__((section(".RAM_D1"))) __attribute__((aligned(32))) uint8_t m_frameBuffer[maxBufferSize];
+
 namespace hardware_abstraction
 {
 namespace Devices
 {
-constexpr uint32_t maxBufferSize = 10500;
 
 class Ov2640Ctrl : public ICameraDevice
 {
 private:
-
-    //static inline __attribute__((section(".RAM_D2"), aligned(32))) uint8_t m_frameBuffer[maxBufferSize];
-	uint8_t m_frameBuffer[maxBufferSize] = { 0 };
 
 	size_t m_frameBufferSize;
 	const uint32_t m_resolutionSize = 15534;

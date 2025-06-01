@@ -1,19 +1,15 @@
-
-from PIL import Image
+from PIL import Image, ImageFile
 import io
 
-# Leer la cadena hexadecimal desde el archivo 'jpeg.txt'
-with open('edges4', 'r') as file:
+ImageFile.LOAD_TRUNCATED_IMAGES = True
+
+with open('zyboJpeg', 'r') as file:
     hex_data = file.read().strip()
 
-# Convertir la cadena hexadecimal en bytes
 image_data = bytes.fromhex(hex_data)
-
-# Crear un objeto de bytes en memoria
 image_stream = io.BytesIO(image_data)
 
-# Abrir la imagen usando Pillow
 image = Image.open(image_stream)
-
-# Mostrar la imagen
+image.load()  # Forzar la carga completa
 image.show()
+

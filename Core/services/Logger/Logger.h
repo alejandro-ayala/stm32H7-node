@@ -22,7 +22,7 @@ private:
     hardware_abstraction::Controllers::UARTController* outSink;
     LogLevel m_logLevel;
     bool m_disable;
-    business_logic::Osal::MutexHandler* uartMutex;
+    SemaphoreHandle_t uartMutex;
 
     // Conversión segura a const char*
     template<typename T>

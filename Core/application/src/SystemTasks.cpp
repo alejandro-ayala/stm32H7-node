@@ -27,9 +27,9 @@ SystemTasks::SystemTasks(const std::shared_ptr<business_logic::Communication::Co
 void SystemTasks::createPoolTasks(const std::shared_ptr<business_logic::Communication::CommunicationManager>& commMng, const std::shared_ptr<business_logic::DataHandling::ImageCapturer>& imageCapturer, const std::shared_ptr<business_logic::ClockSyncronization::SharedClockSlaveManager>& sharedClkMng)
 {
 	try {
-		m_clockSyncTaskHandler    = std::make_shared<business_logic::Osal::TaskHandler>(SystemTasks::syncronizationGlobalClock, "syncronizationGlobalClockTask", DefaultPriorityTask +2, static_cast<business_logic::Osal::VoidPtr>(sharedClkMng.get()), 2048);
+		m_clockSyncTaskHandler    = std::make_shared<business_logic::Osal::TaskHandler>(SystemTasks::syncronizationGlobalClock, "syncronizationGlobalClockTask", DefaultPriorityTask, static_cast<business_logic::Osal::VoidPtr>(sharedClkMng.get()), 2048);
 		m_dataHandlingTaskHandler = std::make_shared<business_logic::Osal::TaskHandler>(SystemTasks::edgeDetection, "edgeDetection", DefaultPriorityTask + 1, static_cast<business_logic::Osal::VoidPtr>(&m_taskParam), 4096);
-		m_commTaskHandler         = std::make_shared<business_logic::Osal::TaskHandler>(SystemTasks::sendData, "sendDataTask", DefaultPriorityTask, static_cast<business_logic::Osal::VoidPtr>(commMng.get()), 2048);
+		m_commTaskHandler         = std::make_shared<business_logic::Osal::TaskHandler>(SystemTasks::sendData, "sendDataTask", DefaultPriorityTask + 2, static_cast<business_logic::Osal::VoidPtr>(commMng.get()), 2048);
 
 	} catch (...)
 	{
@@ -43,7 +43,7 @@ void SystemTasks::edgeDetection(void* argument)
 	auto taskArg = static_cast<TaskParams*>(argument);
 	auto imageCapturer = taskArg->imageCapturer;//std::make_shared<business_logic::DataHandling::ImageCapturer>(*static_cast<business_logic::DataHandling::ImageCapturer*>(taskArg->imageCapturer.get()));
 	auto sharedClkMng  = taskArg->sharedClkMng;
-	const auto periodTimeCaptureImage = 1000;
+	const auto periodTimeCaptureImage = 8000;
 	const auto delayCameraStartup     = 1000;
 
 
@@ -145,27 +145,24 @@ void SystemTasks::sendData(void* argument)
     auto nextSnapshot = std::make_shared<business_logic::DataSerializer::ImageSnapshot>();
 	for(;;)
 	{
-		const auto t1 = xTaskGetTickCount();
-		//LOG_INFO("SystemTasks::sendData");
 		const auto pendingMsgs = isPendingData();
 		if(pendingMsgs)
 		{
-			static int i=0;
+			const auto t1 = xTaskGetTickCount();
 			logMemoryUsage();
-			LOG_TRACE("Sending image information to master node. PendingMSg: ", std::to_string(pendingMsgs));
+
 			getNextImage(nextSnapshot);
-
-			//auto ptrImgDeque = nextSnapshot->m_imgBuffer.get();
-			LOG_TRACE(" PendingMSg after getNextImage: ", isPendingData());
-			i++;
-			for (size_t i = 0; i < nextSnapshot->m_imgSize; i += MAXIMUN_CBOR_BUFFER_SIZE)
+			const auto ptr = nextSnapshot->m_imgBuffer.get();
+			LOG_INFO("Sending image information to master node. PendingMSg: ", std::to_string(pendingMsgs));
+			//i++;
+			for (size_t idxCbor = 0; idxCbor < nextSnapshot->m_imgSize; idxCbor += MAXIMUN_CBOR_BUFFER_SIZE)
 			{
-				size_t chunkSize = std::min(static_cast<size_t>(MAXIMUN_CBOR_BUFFER_SIZE), static_cast<size_t>(nextSnapshot->m_imgSize - i));
+				size_t chunkSize = std::min(static_cast<size_t>(MAXIMUN_CBOR_BUFFER_SIZE), static_cast<size_t>(nextSnapshot->m_imgSize - idxCbor));
 
-			    uint8_t msgIndex = static_cast<uint8_t>(i / MAXIMUN_CBOR_BUFFER_SIZE);
+			    uint8_t msgIndex = static_cast<uint8_t>(idxCbor / MAXIMUN_CBOR_BUFFER_SIZE);
 
 				auto chunkBuffer = std::shared_ptr<uint8_t[]>(new uint8_t[chunkSize]);
-				std::memcpy(chunkBuffer.get(), nextSnapshot->m_imgBuffer.get() + i, chunkSize);
+				std::memcpy(chunkBuffer.get(), nextSnapshot->m_imgBuffer.get() + idxCbor, chunkSize);
 			    business_logic::DataSerializer::ImageSnapshot chunkSnapshot(
 			        nextSnapshot->m_msgId,
 			        msgIndex,
@@ -181,19 +178,29 @@ void SystemTasks::sendData(void* argument)
 		        const auto cborIndex = (nextSnapshot->m_msgId << 6) | (msgIndex & 0x3F);
 		        splitCborToCanMsgs(cborIndex, cborSerializedChunk, canMsgChunks);
 //				generateCanMsgsTest(cborIndex, cborSerializedChunk, canMsgChunks);
-		        bool isLastIteration = (i + MAXIMUN_CBOR_BUFFER_SIZE >= nextSnapshot->m_imgSize);
+		        bool isLastIteration = (idxCbor + MAXIMUN_CBOR_BUFFER_SIZE >= nextSnapshot->m_imgSize);
 				commMng->sendData(canMsgChunks, isLastIteration);
 				bool receivedConfirmation = false;
+				bool warningMisingAck = false;
+				uint8_t confirmationTimeout = 0;
 				while(!receivedConfirmation)
 				{
 					receivedConfirmation = commMng->waitingForConfirmation();
-					m_commTaskHandler->delay(1);
+					m_commTaskHandler->delay(5);
+					if( !warningMisingAck && confirmationTimeout > 100)
+					{
+						warningMisingAck = true;
+						LOG_WARNING("SystemTasks::sendData missing receivedConfirmation for: ", std::to_string(nextSnapshot->m_msgId), "--", std::to_string(msgIndex));
+						//receivedConfirmation = true;
+					}
+					confirmationTimeout++;
 				}
+				LOG_TRACE("CommunicationManager::waitingForConfirmation received FRAME_CONFIRMATION for: ", std::to_string(nextSnapshot->m_msgId), "--", std::to_string(msgIndex));
 
 			}
 			const auto executionTime = (xTaskGetTickCount() - t1) * portTICK_PERIOD_MS;
 			logMemoryUsage();
-			LOG_INFO("SystemTasks::sendData executed in: ", executionTime, " ms");
+			LOG_INFO("SystemTasks::sendData executed in: ", std::to_string(executionTime), " ms");
 			transmisionOnGoing = false;
 		}
 		m_commTaskHandler->delay(sendDataPeriod);

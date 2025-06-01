@@ -68,8 +68,6 @@ void CommunicationManager::sendData(const std::vector<business_logic::Communicat
         std::string frameSize = "CanFrame of " + std::to_string(dataSize) + " bytes ";
         LOG_TRACE(frameSize, std::to_string(data[0]), " ", std::to_string(data[1]), " ", std::to_string(data[2]), " ", std::to_string(data[3]), " ",std::to_string(data[4]), " ", std::to_string(data[5]), " ", std::to_string(data[6]), " ", std::to_string(data[7]));
         canController->transmitMsg(static_cast<uint8_t>(CAN_IDs::IMAGE_DATA), data, dataSize);
-        //TODO check and remove the delay
-        //HAL_Delay(2);
     }
     if(sendEndOfImage)LOG_DEBUG("CommunicationManager::sendData Sending end of Image");
 //Send end of frame:
@@ -95,7 +93,6 @@ bool CommunicationManager::waitingForConfirmation()
 	bool frameConfirmed = false;
 	if(msgSize > 0 && canMsg.id == static_cast<uint8_t>(CAN_IDs::FRAME_CONFIRMATION))
 	{
-		LOG_DEBUG("CommunicationManager::waitingForConfirmation received FRAME_CONFIRMATION");
 		frameConfirmed = true;
 	}
 	return frameConfirmed;

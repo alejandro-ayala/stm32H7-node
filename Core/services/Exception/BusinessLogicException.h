@@ -13,7 +13,7 @@ enum BusinessLogicErrorId
 	CameraTimeout,
 	MemoryAllocationFailed,
 	InvalidArgument,
-	TimeControllerInitialization
+	TimeControllerInitialization,
 };
 
 class BusinessLogicException : public BaseException
