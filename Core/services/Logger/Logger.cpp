@@ -12,7 +12,7 @@ Logger& Logger::Instance()
     return instance;
 }
 
-Logger::Logger() : ILogger(), m_logLevel(LogLevel::Info), m_disable(false), outSink(nullptr), uartMutex(nullptr)
+Logger::Logger() : ILogger(), m_logLevel(LogLevel::Info), m_disable(false), outSink(nullptr)
 {
     initialize();
 }
@@ -49,9 +49,10 @@ void Logger::initialize()
     {
         error++;
     }
-    static business_logic::Osal::MutexHandler staticMutex;
+    //static business_logic::Osal::MutexHandler staticMutex;
     static hardware_abstraction::Controllers::UARTController staticUartController(&sinkCff);
-    uartMutex = &staticMutex;
+    ////uartMutex = &staticMutex;
+    uartMutex = xSemaphoreCreateMutex();
     outSink = &staticUartController;
     outSink->initialize();
 }
@@ -71,9 +72,9 @@ void Logger::log(LogLevel logLevel, const char* msg)
     default: THROW_SERVICES_EXCEPTION(ServicesErrorId::LoggerUnknownLevel, "Unknown logging level")
     }
     std::snprintf(logMsg, sizeof(logMsg), "%s%s", prefix, msg);
-    uartMutex->lock();
+    xSemaphoreTake(uartMutex, portMAX_DELAY);
     outSink->send(logMsg, strlen(logMsg));
-    uartMutex->unlock();
+    xSemaphoreGive(uartMutex);
 }
 
 void Logger::setLogLevel(LogLevel logLevel)

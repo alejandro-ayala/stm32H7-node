@@ -9,7 +9,11 @@ namespace Controllers
 
 CanController::CanController(FDCAN_HandleTypeDef& hfdcan1) : IController("CanController"), m_hfdcan1(hfdcan1)
 {
-	canMutex = std::make_shared<business_logic::Osal::MutexHandler>();
+	canMutex = xSemaphoreCreateMutex();
+	if (canMutex == nullptr) {
+		LOG_INFO("ERROR creating canMutex");
+
+	}
 	initialize();
     HAL_FDCAN_DeInit(&m_hfdcan1);
     initialize();
@@ -17,7 +21,11 @@ CanController::CanController(FDCAN_HandleTypeDef& hfdcan1) : IController("CanCon
 
 CanController::~CanController()
 {
-
+    if (canMutex != nullptr) {
+    	LOG_INFO("~CanControlle vSemaphoreDelete");
+        vSemaphoreDelete(canMutex);
+        canMutex = nullptr;
+    }
 }
 
 void CanController::initialize()
@@ -96,9 +104,9 @@ int CanController::transmitMsg(uint8_t idMsg, const uint8_t *txMsg, uint8_t data
 	l_txHeader.FDFormat = FDCAN_FD_CAN;//FDCAN_CLASSIC_CAN;
 	l_txHeader.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
 	l_txHeader.MessageMarker = 0x0;
-
-	//canMutex->lock();
-
+	//LOG_INFO("TAKE2");
+	xSemaphoreTake(canMutex, portMAX_DELAY);
+	//LOG_INFO("TAKEN2");
 	auto fifoSpace = HAL_FDCAN_GetTxFifoFreeLevel(&m_hfdcan1);
 
 //	if(fifoSpace < 2)
@@ -121,8 +129,9 @@ int CanController::transmitMsg(uint8_t idMsg, const uint8_t *txMsg, uint8_t data
 		LOG_ERROR("CanController::HAL_FDCAN_AddMessageToTxFifoQ NOT ADDED ");
 		return HAL_ERROR;
 	}
-
-	//canMutex->unlock();
+	//LOG_INFO("GIVE2");
+	xSemaphoreGive(canMutex);
+	//LOG_INFO("GIVEN2");
 }
 
 business_logic::Communication::CanFrame CanController::receiveMsg()
@@ -130,7 +139,9 @@ business_logic::Communication::CanFrame CanController::receiveMsg()
 
 	business_logic::Communication::CanFrame rxMsg;
 	uint8_t rxBuffer[16];
-	//canMutex->lock();
+	//LOG_INFO("TAKE");
+	xSemaphoreTake(canMutex, portMAX_DELAY);
+	//LOG_INFO("TAKEN");
 	const auto pendingMsg = HAL_FDCAN_GetRxFifoFillLevel(&m_hfdcan1, FDCAN_RX_FIFO0);
 	if (pendingMsg >0)
 	{
@@ -139,7 +150,9 @@ business_logic::Communication::CanFrame CanController::receiveMsg()
 		rxMsg.dlc = rxHeader.DataLength;
 		memcpy( rxMsg.data , rxBuffer , rxHeader.DataLength);
 	}
-	//canMutex->unlock();
+	//LOG_INFO("GIVE");
+	xSemaphoreGive(canMutex);
+	//LOG_INFO("GIVEN");
 	return rxMsg;
 }
 

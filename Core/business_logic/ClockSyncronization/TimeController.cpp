@@ -10,11 +10,16 @@ namespace ClockSyncronization
 {
 TimeController::TimeController() : IController("TimeController")
 {
+	LOG_INFO("TimeController::TimeControlle");
 	internalTimer = new STM32Timer();
+	BUSINESS_LOGIC_ASSERT( internalTimer != nullptr, services::BusinessLogicErrorId::TimeControllerInitialization, "TimeController initialization error");
+	LOG_INFO("TimeController::TimeControlle created");
+
 }
 
 TimeController::~TimeController()
 {
+	LOG_INFO("TimeController::TimeControlle dtor");
 	delete internalTimer;
 };
 
@@ -27,6 +32,7 @@ void TimeController::initialize()
 
 void TimeController::startTimer()
 {
+	BUSINESS_LOGIC_ASSERT( internalTimer != nullptr, services::BusinessLogicErrorId::TimeControllerInitialization, "TimeController::startTimer initialization error");
 	internalTimer->startTimer();
 }
 void TimeController::stopTimer()
@@ -45,16 +51,19 @@ void TimeController::restartTimer()
 
 double TimeController::getCurrentSecTime()
 {
+	BUSINESS_LOGIC_ASSERT( internalTimer != nullptr, services::BusinessLogicErrorId::TimeControllerInitialization, "TimeController::getCurrentSecTime initialization error");
 	return internalTimer->getCurrentSec();
 }
 
 double TimeController::getCurrentNsecTime()
 {
+	BUSINESS_LOGIC_ASSERT( internalTimer != nullptr, services::BusinessLogicErrorId::TimeControllerInitialization, "TimeController::getCurrentNsecTime initialization error");
 	return internalTimer->getCurrentNsec();
 
 }
 uint64_t TimeController::getCurrentTicks()
 {
+	BUSINESS_LOGIC_ASSERT( internalTimer != nullptr, services::BusinessLogicErrorId::TimeControllerInitialization, "TimeController::getCurrentTicks initialization error");
 	return internalTimer->getCurrentTicks();
 }
 //bool TimeController::elapsedTime()

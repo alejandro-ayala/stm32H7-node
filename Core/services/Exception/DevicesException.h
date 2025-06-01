@@ -14,7 +14,8 @@ enum DevicesErrorId
 	Esp32AdvertisingError,
 	Esp32WaitingConnectionError,
 	Esp32ConfigureSppError,
-	ElectrodeInitializationError
+	ElectrodeInitializationError,
+	Ov2460BufferNotAligned
 };
 
 class DevicesException : public BaseException

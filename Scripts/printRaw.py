@@ -7,7 +7,7 @@ width = 320  # Ancho de la imagen
 height = 240  # Alto de la imagen
 
 # Leer la cadena hexadecimal desde el archivo 'raw.txt'
-with open('edges3', 'r') as file:
+with open('rawImageAssembler', 'r') as file:
     hex_data = file.read().strip()
 
 # Convertir la cadena hexadecimal en bytes

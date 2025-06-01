@@ -3,8 +3,9 @@
 #include "business_logic/Communication/CanFrame.h"
 #include "../IController.h"
 #include <memory>
-#include "business_logic/Osal/MutexHandler.h"
-
+#include "FreeRTOS.h"
+#include "task.h"
+#include "semphr.h"
 namespace hardware_abstraction
 {
 namespace Controllers
@@ -17,7 +18,8 @@ private:
 	FDCAN_FilterTypeDef sFilterConfig;
 	FDCAN_RxHeaderTypeDef rxHeader;
 	int deviceId;
-	std::shared_ptr<business_logic::Osal::MutexHandler> canMutex;
+	//business_logic::Osal::MutexHandler canMutex;
+	SemaphoreHandle_t canMutex;
 
 public:
 	CanController(FDCAN_HandleTypeDef& hfdcan1);

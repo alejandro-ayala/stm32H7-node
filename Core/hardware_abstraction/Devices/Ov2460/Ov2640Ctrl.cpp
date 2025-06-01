@@ -5,31 +5,31 @@
 #include <string.h>
 #include <vector>
 #include "main.h"
+#include "services/Exception/SystemExceptions.h"
 DCMI_HandleTypeDef hdcmi;
+__attribute__((section(".RAM_D1"))) __attribute__((aligned(32))) uint8_t m_frameBuffer[maxBufferSize];
+
 namespace hardware_abstraction
 {
 namespace Devices
 {
 volatile bool frameCaptured;
 
-void CleanDCache_by_Addr(uint32_t* addr, uint32_t size)
+void InvalidateDCache_by_Addr(void *addr, uint32_t size)
 {
-    uint32_t alignedAddr = ((uint32_t)addr) & ~((uint32_t)0x1F);
-    uint32_t alignedSize = size + ((uint32_t)addr - alignedAddr);
+    if (addr == nullptr || size == 0) return;
 
-    SCB_CleanDCache_by_Addr((uint32_t*)alignedAddr, alignedSize);
-}
+    uint32_t addr32 = (uint32_t)addr;
+    uint32_t start_addr = addr32 & ~((uint32_t)0x1F);
+    uint32_t end_addr = (addr32 + size + 31) & ~((uint32_t)0x1F);
+    uint32_t aligned_size = end_addr - start_addr;
 
-void InvalidateDCache_by_Addr(uint32_t* addr, uint32_t size)
-{
-    uint32_t alignedAddr = ((uint32_t)addr) & ~((uint32_t)0x1F);
-    uint32_t alignedSize = size + ((uint32_t)addr - alignedAddr);
-
-    SCB_InvalidateDCache_by_Addr((uint32_t*)alignedAddr, alignedSize);
+    SCB_InvalidateDCache_by_Addr((void*)start_addr, aligned_size);
 }
 
 extern "C" void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi)
 {
+//	LOG_INFO("HAL_DCMI_FrameEventCallback frameCaptured");
 	frameCaptured = true;
 }
 
@@ -102,7 +102,7 @@ void Ov2640Ctrl::setRegistersConfiguration(const std::vector<std::pair<uint8_t, 
 	for(const auto& [regAddr, regVal] : registerCfg)
 	{
 		m_i2cControl->send(regAddr, regVal);
-		LOG_DEBUG("Ov2640Ctrl::setRegistersConfiguration: Register:", regAddr, " = ", regVal);
+		LOG_TRACE("Ov2640Ctrl::setRegistersConfiguration: Register:", regAddr, " = ", regVal);
 		HAL_Delay(10);
 		uint8_t newRegVal;
 		m_i2cControl->receive(regAddr, &newRegVal);
@@ -128,74 +128,63 @@ void Ov2640Ctrl::configuration(CameraResolution resolution)
 
 bool Ov2640Ctrl::captureSnapshot()
 {
-	std::fill(std::begin(m_frameBuffer), std::end(m_frameBuffer), 0);
-	frameCaptured = false;
-	if ((hdcmi.Instance->CR & DCMI_CR_ENABLE) != 0)
-	{
-	    LOG_ERROR("DCMI still active!");
-	    HAL_DCMI_Stop(&hdcmi);
-	}
-	HAL_DCMI_Start_DMA(&hdcmi, DCMI_MODE_SNAPSHOT, (uint32_t)m_frameBuffer, maxBufferSize*0.8);
-	__HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_FRAME);
-	//TODO review delay
-	//HAL_Delay(100);
-	frameCaptured = true;
+    std::fill(std::begin(m_frameBuffer), std::end(m_frameBuffer), 0);
+    frameCaptured = false;
+    if ((hdcmi.Instance->CR & DCMI_CR_ENABLE) != 0)
+    {
+        LOG_ERROR("DCMI still active!");
+        HAL_DCMI_Stop(&hdcmi);
+    }
 
-	uint32_t startTick = HAL_GetTick();
-	while (!frameCaptured)
-	{
-		if ((HAL_GetTick() - startTick) > 2000)
-		{
-			LOG_ERROR("Timeout waiting for frame capture");
-			//HAL_DCMI_Stop(&hdcmi);
-			//return false;
-		}
-	}
+    HAL_DCMI_Start_DMA(&hdcmi, DCMI_MODE_SNAPSHOT, (uint32_t)m_frameBuffer, maxBufferSize / 4);
+    __HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_FRAME);
 
-	//InvalidateDCache_by_Addr((uint32_t*)m_frameBuffer, m_resolutionSize);
-	//HAL_DCMI_Suspend(&hdcmi);
-	HAL_DCMI_Stop(&hdcmi);
+    uint32_t startTick = HAL_GetTick();
+    while (!frameCaptured)
+    {
+        if ((HAL_GetTick() - startTick) > 2000)
+        {
+            LOG_ERROR("Timeout waiting for frame capture");
+            HAL_DCMI_Stop(&hdcmi);
+            return false;
+        }
+    }
+    LOG_INFO("HAL_DCMI_FrameEventCallback frameCaptured");
+//    DEVICES_ASSERT((uint32_t)m_frameBuffer & 0x1F, services::DevicesErrorId::Ov2460BufferNotAligned, "Buffer not aligned");
+//    InvalidateDCache_by_Addr(m_frameBuffer, maxBufferSize);
+    HAL_DCMI_Stop(&hdcmi);
 
-	const auto imgSize = processCapture();
-	LOG_INFO("Image size:", imgSize, " bytes");
-	if(imgSize >= maxBufferSize)
-		return false;
-	else
-		return true;
+    const auto imgSize = processCapture();
+    LOG_INFO("Image size:", std::to_string(imgSize), " bytes");
+    if(imgSize >= (maxBufferSize - 1))
+        return false;
+    else
+        return true;
 }
 
 uint32_t Ov2640Ctrl::processCapture()
 {
-	uint32_t bufferPointer = 0;
-	bool headerFound;
-	static int i=0;
-	m_frameBufferSize = 0;
-	while (1)
-	{
-		if (!headerFound && m_frameBuffer[bufferPointer] == 0xFF
-				&& m_frameBuffer[bufferPointer + 1] == 0xD8)
-		{
-			headerFound = true;
-			LOG_TRACE("Found header of JPEG file");
-		}
-		if (headerFound && m_frameBuffer[bufferPointer] == 0xFF
-				&& m_frameBuffer[bufferPointer + 1] == 0xD9)
-		{
-			bufferPointer = bufferPointer + 2;
-			LOG_DEBUG("Found EOI of JPEG file");
-			headerFound = false;
-
-			break;
-		}
-		if (bufferPointer >= maxBufferSize)
-		{
-			LOG_WARNING("Exceeded maximum buffer size");
-			break;
-		}
-		bufferPointer++;
-	}
-	i++;
-	m_frameBufferSize = bufferPointer;
+    uint32_t bufferPointer = 0;
+    bool headerFound = false;
+    m_frameBufferSize = 0;
+    while (bufferPointer < maxBufferSize - 1)
+    {
+        if (!headerFound && m_frameBuffer[bufferPointer] == 0xFF
+                && m_frameBuffer[bufferPointer + 1] == 0xD8)
+        {
+            headerFound = true;
+            LOG_TRACE("Found header of JPEG file");
+        }
+        if (headerFound && m_frameBuffer[bufferPointer] == 0xFF
+                && m_frameBuffer[bufferPointer + 1] == 0xD9)
+        {
+            bufferPointer += 2;
+            LOG_DEBUG("Found EOI of JPEG file");
+            break;
+        }
+        bufferPointer++;
+    }
+    m_frameBufferSize = bufferPointer;
     return m_frameBufferSize;
 }
 
