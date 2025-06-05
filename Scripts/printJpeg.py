@@ -3,7 +3,7 @@ import io
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
-with open('zyboJpeg', 'r') as file:
+with open('AssembledPtr', 'r') as file:
     hex_data = file.read().strip()
 
 image_data = bytes.fromhex(hex_data)

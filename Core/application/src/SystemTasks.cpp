@@ -186,12 +186,12 @@ void SystemTasks::sendData(void* argument)
 				while(!receivedConfirmation)
 				{
 					receivedConfirmation = commMng->waitingForConfirmation();
-					m_commTaskHandler->delay(5);
+					m_commTaskHandler->delay(1);
 					if( !warningMisingAck && confirmationTimeout > 100)
 					{
 						warningMisingAck = true;
 						LOG_WARNING("SystemTasks::sendData missing receivedConfirmation for: ", std::to_string(nextSnapshot->m_msgId), "--", std::to_string(msgIndex));
-						//receivedConfirmation = true;
+						receivedConfirmation = true;
 					}
 					confirmationTimeout++;
 				}
