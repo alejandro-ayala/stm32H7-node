@@ -10,6 +10,7 @@
 #include "cmsis_os.h"
 #include <memory>
 #include <vector>
+#include "stm32h7xx_hal.h"
 
 namespace application
 {
@@ -37,7 +38,7 @@ public:
 	static void edgeDetection(void* argument);
 	static void sendData(void* argument);
     void createPoolTasks(const std::shared_ptr<business_logic::Communication::CommunicationManager>& commMng, const std::shared_ptr<business_logic::DataHandling::ImageCapturer>& imageCapturer, const std::shared_ptr<business_logic::ClockSyncronization::SharedClockSlaveManager>& sharedClkMng);
-    static void getNextImage(std::shared_ptr<business_logic::DataSerializer::ImageSnapshot>& edgesSnapshot);
+    static bool getNextImage(std::shared_ptr<business_logic::DataSerializer::ImageSnapshot>& edgesSnapshot);
     static uint8_t isPendingData();
     static void splitCborToCanMsgs(uint8_t canMsgId, const std::vector<uint8_t>& cborSerializedChunk, std::vector<business_logic::Communication::CanMsg>& canMsgChunks);
 };

@@ -6,6 +6,63 @@
 
 namespace application
 {
+
+extern "C" {
+TIM_HandleTypeDef timStats;
+
+
+void vConfigureTimerForRunTimeStats(void)
+{
+
+	  /* USER CODE BEGIN TIM2_Init 0 */
+
+	  /* USER CODE END TIM2_Init 0 */
+
+	  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+	  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+	  /* USER CODE BEGIN TIM2_Init 1 */
+
+	  /* USER CODE END TIM2_Init 1 */
+	  timStats.Instance = TIM2;
+	  timStats.Init.Prescaler = 274;
+	  timStats.Init.CounterMode = TIM_COUNTERMODE_UP;
+	  timStats.Init.Period = 0xFFFFFFFF ;
+	  timStats.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+	  timStats.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+	  if (HAL_TIM_Base_Init(&timStats) != HAL_OK)
+	  {
+	    Error_Handler();
+	  }
+	  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+	  if (HAL_TIM_ConfigClockSource(&timStats, &sClockSourceConfig) != HAL_OK)
+	  {
+	    Error_Handler();
+	  }
+	  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+	  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+	  if (HAL_TIMEx_MasterConfigSynchronization(&timStats, &sMasterConfig) != HAL_OK)
+	  {
+	    Error_Handler();
+	  }
+
+    HAL_TIM_Base_Start(&timStats);
+}
+
+uint32_t ulGetRunTimeCounterValue(void)
+{
+    return __HAL_TIM_GET_COUNTER(&timStats);
+}
+
+void printSystemStats()
+{
+	char statsBuffer[512];
+	vTaskGetRunTimeStats(statsBuffer);
+	std::string systemStats(statsBuffer);
+	LOG_INFO(statsBuffer);
+}
+}
+
 volatile bool transmisionOnGoing = false;
 volatile bool clockSynq = false;
 
@@ -22,6 +79,8 @@ SystemTasks::SystemTasks(const std::shared_ptr<business_logic::Communication::Co
 	m_taskParam.sharedClkMng  = sharedClkMng;
 
 	LOG_TRACE(" Initial value of queue: ", std::to_string(isPendingData()));
+
+	vConfigureTimerForRunTimeStats();
 }
 
 void SystemTasks::createPoolTasks(const std::shared_ptr<business_logic::Communication::CommunicationManager>& commMng, const std::shared_ptr<business_logic::DataHandling::ImageCapturer>& imageCapturer, const std::shared_ptr<business_logic::ClockSyncronization::SharedClockSlaveManager>& sharedClkMng)
@@ -45,7 +104,7 @@ void SystemTasks::edgeDetection(void* argument)
 	auto sharedClkMng  = taskArg->sharedClkMng;
 	const auto periodTimeCaptureImage = 8000;
 	const auto delayCameraStartup     = 1000;
-
+	int32_t triggerSystemStats = 0;
 
 	imageCapturer->initialize();
 	m_dataHandlingTaskHandler->delayUntil(delayCameraStartup);
@@ -71,6 +130,12 @@ void SystemTasks::edgeDetection(void* argument)
 			const auto isValidImg = imageCapturer->captureImage();
 			if(isValidImg)
 			{
+				if(triggerSystemStats % 5 == 0)
+				{
+					printSystemStats();
+				}
+				triggerSystemStats++;
+
 				logMemoryUsage();
 				const auto captureTimestamp = sharedClkMng->getLocalTimeReference();
 
@@ -134,7 +199,6 @@ void SystemTasks::sendData(void* argument)
 {
 	auto commMng = std::make_shared<business_logic::Communication::CommunicationManager>(*static_cast<business_logic::Communication::CommunicationManager*>(argument));
 
-	const auto sendDataPeriod = 1000;
     size_t freeHeapSize = xPortGetFreeHeapSize();
     size_t minEverFreeHeapSize = xPortGetMinimumEverFreeHeapSize();
     const std::string startMsg = "SystemTasks::sendData started --> freeHeapSize: " + std::to_string(freeHeapSize) + " minEverFreeHeapSize " + std::to_string(minEverFreeHeapSize) + " stackSize: " + std::to_string(uxTaskGetStackHighWaterMark( NULL ));
@@ -145,13 +209,14 @@ void SystemTasks::sendData(void* argument)
     auto nextSnapshot = std::make_shared<business_logic::DataSerializer::ImageSnapshot>();
 	for(;;)
 	{
-		const auto pendingMsgs = isPendingData();
+
+		const auto pendingMsgs = getNextImage(nextSnapshot);
 		if(pendingMsgs)
 		{
 			const auto t1 = xTaskGetTickCount();
 			logMemoryUsage();
 
-			getNextImage(nextSnapshot);
+
 			const auto ptr = nextSnapshot->m_imgBuffer.get();
 			LOG_INFO("Sending image information to master node. PendingMSg: ", std::to_string(pendingMsgs));
 			//i++;
@@ -203,7 +268,6 @@ void SystemTasks::sendData(void* argument)
 			LOG_INFO("SystemTasks::sendData executed in: ", std::to_string(executionTime), " ms");
 			transmisionOnGoing = false;
 		}
-		m_commTaskHandler->delay(sendDataPeriod);
 	}
 	/* USER CODE END 5 */
 }
@@ -248,10 +312,11 @@ uint8_t SystemTasks::isPendingData()
 	const auto pendingMsg = m_capturesQueue->getStoredMsg();
 	return pendingMsg;
 }
-void SystemTasks::getNextImage(std::shared_ptr<business_logic::DataSerializer::ImageSnapshot>& edgesSnapshot)
+
+bool SystemTasks::getNextImage(std::shared_ptr<business_logic::DataSerializer::ImageSnapshot>& edgesSnapshot)
 {
     LOG_TRACE("SystemTasks::getNextImage");
-    m_capturesQueue->receive(edgesSnapshot);
+    return m_capturesQueue->receive(edgesSnapshot);
 }
 
 void SystemTasks::splitCborToCanMsgs(uint8_t canMsgId, const std::vector<uint8_t>& cborSerializedChunk, std::vector<business_logic::Communication::CanMsg>& canMsgChunks)
