@@ -9,6 +9,84 @@ namespace application
 
 extern "C" {
 TIM_HandleTypeDef timStats;
+#define MAX_REGISTRIES 10
+typedef struct {
+    const char *taskName;
+    uint32_t totalTime;
+    uint32_t minTime;
+    uint32_t maxTime;
+    uint32_t totalExecutions;
+} RunTimeStats_t;
+
+static RunTimeStats_t runtimeStatsRegistries[MAX_REGISTRIES];
+static uint8_t currentRegisteredStats = 0;
+
+
+
+#include <string.h>
+
+extern uint32_t ulGetRunTimeCounterValue(void);
+
+void RunTimeStats_Start(uint32_t *timestamp)
+{
+    *timestamp = ulGetRunTimeCounterValue();
+}
+
+void RunTimeStats_End(const char *taskName, uint32_t timestamp_start)
+{
+    uint32_t duration = ulGetRunTimeCounterValue() - timestamp_start;
+
+    RunTimeStats_t *currentTime = NULL;
+    for (int i = 0; i < currentRegisteredStats; i++) {
+        if (strcmp(runtimeStatsRegistries[i].taskName, taskName) == 0) {
+        	currentTime = &runtimeStatsRegistries[i];
+            break;
+        }
+    }
+
+    // Create new instance
+    if (currentTime == NULL && currentRegisteredStats < MAX_REGISTRIES) {
+    	runtimeStatsRegistries[currentRegisteredStats].taskName = taskName;
+    	runtimeStatsRegistries[currentRegisteredStats].totalTime = 0;
+    	runtimeStatsRegistries[currentRegisteredStats].minTime = 0xFFFFFFFF;
+    	runtimeStatsRegistries[currentRegisteredStats].maxTime = 0;
+    	runtimeStatsRegistries[currentRegisteredStats].totalExecutions = 0;
+        currentTime = &runtimeStatsRegistries[currentRegisteredStats++];
+    }
+
+    if (currentTime) {
+        currentTime->totalTime += duration;
+        if (duration < currentTime->minTime) currentTime->minTime = duration;
+        if (duration > currentTime->maxTime) currentTime->maxTime = duration;
+        currentTime->totalExecutions++;
+    }
+}
+#include <sstream>
+#include <string>
+
+std::string RunTimeStats_FormatLog(const RunTimeStats_t& r)
+{
+    std::ostringstream oss;
+    uint32_t averageTime = (r.totalExecutions > 0) ? (r.totalTime / r.totalExecutions) : 0;
+
+    oss << r.taskName << ": executions=" << r.totalExecutions
+        << ", min=" << r.minTime << " us"
+        << ", max=" << r.maxTime << " us"
+        << ", prom=" << averageTime << " us";
+
+    return oss.str();
+}
+
+
+void RunTimeStats_Print(void)
+{
+
+    LOG_INFO("Runtime execution time");
+    for (int i = 0; i < currentRegisteredStats; i++) {
+    	std::string logEntry = RunTimeStats_FormatLog(runtimeStatsRegistries[i]);
+    	LOG_INFO(logEntry);
+    }
+}
 
 
 void vConfigureTimerForRunTimeStats(void)
@@ -52,14 +130,6 @@ void vConfigureTimerForRunTimeStats(void)
 uint32_t ulGetRunTimeCounterValue(void)
 {
     return __HAL_TIM_GET_COUNTER(&timStats);
-}
-
-void printSystemStats()
-{
-	char statsBuffer[512];
-	vTaskGetRunTimeStats(statsBuffer);
-	std::string systemStats(statsBuffer);
-	LOG_INFO(statsBuffer);
 }
 }
 
@@ -119,8 +189,18 @@ void SystemTasks::edgeDetection(void* argument)
     const std::string startMsg = "SystemTasks::edgeDetection started --> freeHeapSize: " + std::to_string(freeHeapSize) + " minEverFreeHeapSize " + std::to_string(minEverFreeHeapSize) + " stackSize: " + std::to_string(uxTaskGetStackHighWaterMark( NULL ));
     LOG_TRACE(startMsg);
 
+    uint32_t startExecutionTime;
+for(int i=1;i<10;i++)
+{
+    RunTimeStats_Start(&startExecutionTime);
+	m_dataHandlingTaskHandler->delay(periodTimeCaptureImage*i);
+	RunTimeStats_End("edgeDetection", startExecutionTime);
+	RunTimeStats_Print();
+}
+
 	for(;;)
 	{
+		RunTimeStats_Start(&startExecutionTime);
 		const auto t1 = xTaskGetTickCount();
 		if(clockSynq && transmisionOnGoing == false)
 		{
@@ -130,11 +210,15 @@ void SystemTasks::edgeDetection(void* argument)
 			const auto isValidImg = imageCapturer->captureImage();
 			if(isValidImg)
 			{
-				if(triggerSystemStats % 5 == 0)
-				{
-					printSystemStats();
-				}
-				triggerSystemStats++;
+//				if(triggerSystemStats % 5 == 0)
+//				{
+//					LOG_INFO("*********FreeRTOS stats*********");
+//					printSystemStats();
+//					LOG_INFO("*********System Custom stats*********");
+//					RunTimeStats_Print();
+//					LOG_INFO("***************************");
+//				}
+//				triggerSystemStats++;
 
 				logMemoryUsage();
 				const auto captureTimestamp = sharedClkMng->getLocalTimeReference();
@@ -190,6 +274,7 @@ void SystemTasks::edgeDetection(void* argument)
 				LOG_WARNING("SystemTasks::edgeDetection invalid captured image");
 			}
 		}
+		RunTimeStats_End("edgeDetection", startExecutionTime);
 		m_dataHandlingTaskHandler->delay(periodTimeCaptureImage);
 	}
 	/* USER CODE END 5 */
@@ -207,9 +292,10 @@ void SystemTasks::sendData(void* argument)
 	/* Infinite loop */
 
     auto nextSnapshot = std::make_shared<business_logic::DataSerializer::ImageSnapshot>();
+    uint32_t startExecutionTime;
 	for(;;)
 	{
-
+		RunTimeStats_Start(&startExecutionTime);
 		const auto pendingMsgs = getNextImage(nextSnapshot);
 		if(pendingMsgs)
 		{
@@ -265,6 +351,7 @@ void SystemTasks::sendData(void* argument)
 			}
 			const auto executionTime = (xTaskGetTickCount() - t1) * portTICK_PERIOD_MS;
 			logMemoryUsage();
+			RunTimeStats_End("sendData", startExecutionTime);
 			LOG_INFO("SystemTasks::sendData executed in: ", std::to_string(executionTime), " ms");
 			transmisionOnGoing = false;
 		}
@@ -284,8 +371,10 @@ void SystemTasks::syncronizationGlobalClock(void* argument)
     LOG_INFO(startMsg);
 	/* USER CODE BEGIN 5 */
 	/* Infinite loop */
+    uint32_t startExecutionTime;
 	for(;;)
 	{
+		RunTimeStats_Start(&startExecutionTime);
 		static int i = 0;
 		const auto t1 = xTaskGetTickCount();
 		//LOG_INFO("SystemTasks::syncronizationGlobalClock");
@@ -302,6 +391,7 @@ void SystemTasks::syncronizationGlobalClock(void* argument)
 			if((i%10)  == 0){logMemoryUsage();i=0;}
 		}
 		i++;
+		RunTimeStats_End("syncronizationGlobalClock", startExecutionTime);
 		m_clockSyncTaskHandler->delay(syncClkPeriod);
 	}
 	/* USER CODE END 5 */
