@@ -137,9 +137,9 @@ standard names. */
 /* Section where parameter definitions can be added (for instance, to override default ones in FreeRTOS.h) */
 /* USER CODE END Defines */
 
-#define configGENERATE_RUN_TIME_STATS            1
-#define configUSE_STATS_FORMATTING_FUNCTIONS     1
-#define configUSE_TRACE_FACILITY 1
+#define configGENERATE_RUN_TIME_STATS            0
+#define configUSE_STATS_FORMATTING_FUNCTIONS     0
+#define configUSE_TRACE_FACILITY 0
 #define portCONFIGURE_TIMER_FOR_RUN_TIME_STATS()     vConfigureTimerForRunTimeStats()
 #define portGET_RUN_TIME_COUNTER_VALUE()             ulGetRunTimeCounterValue()
 
