@@ -6,7 +6,6 @@
 
 namespace application
 {
-
 extern "C" {
 TIM_HandleTypeDef timStats;
 #define MAX_REGISTRIES 10
@@ -174,7 +173,7 @@ void SystemTasks::edgeDetection(void* argument)
 	auto sharedClkMng  = taskArg->sharedClkMng;
 	const auto periodTimeCaptureImage = 8000;
 	const auto delayCameraStartup     = 1000;
-	int32_t triggerSystemStats = 0;
+
 
 	imageCapturer->initialize();
 	m_dataHandlingTaskHandler->delayUntil(delayCameraStartup);
@@ -190,13 +189,6 @@ void SystemTasks::edgeDetection(void* argument)
     LOG_TRACE(startMsg);
 
     uint32_t startExecutionTime;
-for(int i=1;i<10;i++)
-{
-    RunTimeStats_Start(&startExecutionTime);
-	m_dataHandlingTaskHandler->delay(periodTimeCaptureImage*i);
-	RunTimeStats_End("edgeDetection", startExecutionTime);
-	RunTimeStats_Print();
-}
 
 	for(;;)
 	{
@@ -204,22 +196,11 @@ for(int i=1;i<10;i++)
 		const auto t1 = xTaskGetTickCount();
 		if(clockSynq && transmisionOnGoing == false)
 		{
-
 			transmisionOnGoing = true;
 			logMemoryUsage();
 			const auto isValidImg = imageCapturer->captureImage();
 			if(isValidImg)
 			{
-//				if(triggerSystemStats % 5 == 0)
-//				{
-//					LOG_INFO("*********FreeRTOS stats*********");
-//					printSystemStats();
-//					LOG_INFO("*********System Custom stats*********");
-//					RunTimeStats_Print();
-//					LOG_INFO("***************************");
-//				}
-//				triggerSystemStats++;
-
 				logMemoryUsage();
 				const auto captureTimestamp = sharedClkMng->getLocalTimeReference();
 
@@ -275,6 +256,7 @@ for(int i=1;i<10;i++)
 			}
 		}
 		RunTimeStats_End("edgeDetection", startExecutionTime);
+
 		m_dataHandlingTaskHandler->delay(periodTimeCaptureImage);
 	}
 	/* USER CODE END 5 */
@@ -283,7 +265,7 @@ for(int i=1;i<10;i++)
 void SystemTasks::sendData(void* argument)
 {
 	auto commMng = std::make_shared<business_logic::Communication::CommunicationManager>(*static_cast<business_logic::Communication::CommunicationManager*>(argument));
-
+	const auto sendDataPeriod = 1000;
     size_t freeHeapSize = xPortGetFreeHeapSize();
     size_t minEverFreeHeapSize = xPortGetMinimumEverFreeHeapSize();
     const std::string startMsg = "SystemTasks::sendData started --> freeHeapSize: " + std::to_string(freeHeapSize) + " minEverFreeHeapSize " + std::to_string(minEverFreeHeapSize) + " stackSize: " + std::to_string(uxTaskGetStackHighWaterMark( NULL ));
@@ -296,13 +278,15 @@ void SystemTasks::sendData(void* argument)
 	for(;;)
 	{
 		RunTimeStats_Start(&startExecutionTime);
-		const auto pendingMsgs = getNextImage(nextSnapshot);
+
+		const auto pendingMsgs = isPendingData();
+
 		if(pendingMsgs)
 		{
 			const auto t1 = xTaskGetTickCount();
 			logMemoryUsage();
 
-
+			getNextImage(nextSnapshot);
 			const auto ptr = nextSnapshot->m_imgBuffer.get();
 			LOG_INFO("Sending image information to master node. PendingMSg: ", std::to_string(pendingMsgs));
 			//i++;
@@ -333,12 +317,12 @@ void SystemTasks::sendData(void* argument)
 				commMng->sendData(canMsgChunks, isLastIteration);
 				bool receivedConfirmation = false;
 				bool warningMisingAck = false;
-				uint8_t confirmationTimeout = 0;
+				uint16_t confirmationTimeout = 0;
 				while(!receivedConfirmation)
 				{
 					receivedConfirmation = commMng->waitingForConfirmation();
-					m_commTaskHandler->delay(1);
-					if( !warningMisingAck && confirmationTimeout > 100)
+					if(!receivedConfirmation)m_commTaskHandler->delay(10);
+					if( !warningMisingAck && confirmationTimeout > 500)
 					{
 						warningMisingAck = true;
 						LOG_WARNING("SystemTasks::sendData missing receivedConfirmation for: ", std::to_string(nextSnapshot->m_msgId), "--", std::to_string(msgIndex));
@@ -346,7 +330,7 @@ void SystemTasks::sendData(void* argument)
 					}
 					confirmationTimeout++;
 				}
-				LOG_TRACE("CommunicationManager::waitingForConfirmation received FRAME_CONFIRMATION for: ", std::to_string(nextSnapshot->m_msgId), "--", std::to_string(msgIndex));
+				//LOG_INFO("CommunicationManager::waitingForConfirmation received FRAME_CONFIRMATION for: ", std::to_string(nextSnapshot->m_msgId), "--", std::to_string(msgIndex));
 
 			}
 			const auto executionTime = (xTaskGetTickCount() - t1) * portTICK_PERIOD_MS;
@@ -355,6 +339,8 @@ void SystemTasks::sendData(void* argument)
 			LOG_INFO("SystemTasks::sendData executed in: ", std::to_string(executionTime), " ms");
 			transmisionOnGoing = false;
 		}
+
+		m_commTaskHandler->delay(sendDataPeriod);
 	}
 	/* USER CODE END 5 */
 }
@@ -372,6 +358,7 @@ void SystemTasks::syncronizationGlobalClock(void* argument)
 	/* USER CODE BEGIN 5 */
 	/* Infinite loop */
     uint32_t startExecutionTime;
+    int32_t triggerSystemStats = 0;
 	for(;;)
 	{
 		RunTimeStats_Start(&startExecutionTime);
@@ -393,6 +380,17 @@ void SystemTasks::syncronizationGlobalClock(void* argument)
 		i++;
 		RunTimeStats_End("syncronizationGlobalClock", startExecutionTime);
 		m_clockSyncTaskHandler->delay(syncClkPeriod);
+
+		if(triggerSystemStats > 10)
+		{
+//					LOG_INFO("*********FreeRTOS stats*********");
+//					printSystemStats();
+			LOG_INFO("*********System Custom stats*********");
+			RunTimeStats_Print();
+			LOG_INFO("***************************");
+			triggerSystemStats = 0;
+		}
+		triggerSystemStats++;
 	}
 	/* USER CODE END 5 */
 }
