@@ -150,6 +150,8 @@ business_logic::Communication::CanFrame CanController::receiveMsg()
 		rxMsg.dlc = rxHeader.DataLength;
 		memcpy( rxMsg.data , rxBuffer , rxHeader.DataLength);
 	}
+	else
+		rxMsg.dlc = 0;
 	//LOG_INFO("GIVE");
 	xSemaphoreGive(canMutex);
 	//LOG_INFO("GIVEN");

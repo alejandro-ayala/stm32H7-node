@@ -94,6 +94,11 @@ bool CommunicationManager::waitingForConfirmation()
 	if(msgSize > 0 && canMsg.id == static_cast<uint8_t>(CAN_IDs::FRAME_CONFIRMATION))
 	{
 		frameConfirmed = true;
+		LOG_TRACE("CommunicationManager::waitingForConfirmation received FRAME_CONFIRMATION");
+	}
+	else if(msgSize > 0)
+	{
+		LOG_WARNING("CommunicationManager::waitingForConfirmation Rx: ", std::to_string(canMsg.id));
 	}
 	return frameConfirmed;
 }
