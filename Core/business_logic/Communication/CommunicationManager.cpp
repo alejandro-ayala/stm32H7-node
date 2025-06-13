@@ -46,25 +46,6 @@ void CommunicationManager::sendData(const std::vector<business_logic::Communicat
             data[i] = frame.payload[i - CAN_MSG_ID_FIELD_SIZE];
         }
 
-/*******
-        std::ostringstream messageStream;
-        messageStream << "CAN Message: ";
-        messageStream << "ID=" << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(frame.canMsgId) << ", ";
-        messageStream << "Index=" << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(frame.canMsgIndex) << ", ";
-        messageStream << "Payload=[";
-        for (uint8_t i = 0; i < frame.payloadSize; i++)
-        {
-            if (i > 0)
-                messageStream << " ";
-            messageStream << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(frame.payload[i]);
-        }
-        messageStream << "]";
-
-        // Convertir el stream a std::string
-        std::string canMessage = messageStream.str();
-        LOG_INFO(canMessage);
-
- *******/
         std::string frameSize = "CanFrame of " + std::to_string(dataSize) + " bytes ";
         LOG_TRACE(frameSize, std::to_string(data[0]), " ", std::to_string(data[1]), " ", std::to_string(data[2]), " ", std::to_string(data[3]), " ",std::to_string(data[4]), " ", std::to_string(data[5]), " ", std::to_string(data[6]), " ", std::to_string(data[7]));
         canController->transmitMsg(static_cast<uint8_t>(CAN_IDs::IMAGE_DATA), data, dataSize);
