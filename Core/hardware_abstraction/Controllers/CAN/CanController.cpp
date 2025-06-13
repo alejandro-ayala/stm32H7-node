@@ -108,18 +108,24 @@ int CanController::transmitMsg(uint8_t idMsg, const uint8_t *txMsg, uint8_t data
 	xSemaphoreTake(canMutex, portMAX_DELAY);
 	//LOG_INFO("TAKEN2");
 	auto fifoSpace = HAL_FDCAN_GetTxFifoFreeLevel(&m_hfdcan1);
-
+	static uint32_t txFailed = 0;
+	if(fifoSpace < 30)txFailed++;
 //	if(fifoSpace < 2)
 //	{
 //		LOG_WARNING("CanController::transmitMsg fifoSpace is almost full: ", std::to_string(fifoSpace));
 //	}
 //	else LOG_TRACE("CanController::transmitMsg fifoSpace: ", std::to_string(fifoSpace));
 	uint8_t waitForSpace = 0;
-	while(fifoSpace == 0)
+
+	while(fifoSpace < 10)
 	{
 		if(waitForSpace > 5)
-			LOG_ERROR("CanController::transmitMsg fifoSpace is full. Retry: ", std::to_string(waitForSpace));
-		HAL_Delay(5);
+			LOG_ERROR("CanController::transmitMsg fifoSpace is full: availableSpace: ", std::to_string(fifoSpace) , " Retry: ", std::to_string(waitForSpace));
+		else if(waitForSpace > 50)
+		{
+			LOG_ERROR("CanController::transmitMsg fifoSpace is full: availableSpace: ", std::to_string(fifoSpace), " Going ahead");
+		}
+		vTaskDelay(10 / portTICK_PERIOD_MS);
 		fifoSpace = HAL_FDCAN_GetTxFifoFreeLevel(&m_hfdcan1);
 		waitForSpace++;
 	}
@@ -127,6 +133,7 @@ int CanController::transmitMsg(uint8_t idMsg, const uint8_t *txMsg, uint8_t data
 	if (HAL_FDCAN_AddMessageToTxFifoQ(&m_hfdcan1, &l_txHeader, txMsg) != HAL_OK)
 	{
 		LOG_ERROR("CanController::HAL_FDCAN_AddMessageToTxFifoQ NOT ADDED ");
+		xSemaphoreGive(canMutex);
 		return HAL_ERROR;
 	}
 	//LOG_INFO("GIVE2");

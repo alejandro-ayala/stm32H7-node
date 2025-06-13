@@ -31,10 +31,11 @@ void RunTimeStats_Start(uint32_t *timestamp)
     *timestamp = ulGetRunTimeCounterValue();
 }
 
-void RunTimeStats_End(const char *taskName, uint32_t timestamp_start)
+void RunTimeStats_End(const char *taskName, uint32_t timestamp_start, bool printSample)
 {
-    uint32_t duration = ulGetRunTimeCounterValue() - timestamp_start;
 
+    uint32_t duration = ulGetRunTimeCounterValue() - timestamp_start;
+//#ifdef RuntimeStats
     RunTimeStats_t *currentTime = NULL;
     for (int i = 0; i < currentRegisteredStats; i++) {
         if (strcmp(runtimeStatsRegistries[i].taskName, taskName) == 0) {
@@ -58,6 +59,12 @@ void RunTimeStats_End(const char *taskName, uint32_t timestamp_start)
         if (duration < currentTime->minTime) currentTime->minTime = duration;
         if (duration > currentTime->maxTime) currentTime->maxTime = duration;
         currentTime->totalExecutions++;
+    }
+//#endif
+    if(printSample)
+    {
+        const std::string strRuntime = std::string(taskName) + " executed in " + std::to_string(duration) + " us";
+        LOG_INFO(strRuntime);
     }
 }
 #include <sstream>
@@ -254,8 +261,9 @@ void SystemTasks::edgeDetection(void* argument)
 				transmisionOnGoing = false;
 				LOG_WARNING("SystemTasks::edgeDetection invalid captured image");
 			}
+			RunTimeStats_End("edgeDetection", startExecutionTime, true);
 		}
-		RunTimeStats_End("edgeDetection", startExecutionTime);
+
 
 		m_dataHandlingTaskHandler->delay(periodTimeCaptureImage);
 	}
@@ -265,7 +273,7 @@ void SystemTasks::edgeDetection(void* argument)
 void SystemTasks::sendData(void* argument)
 {
 	auto commMng = std::make_shared<business_logic::Communication::CommunicationManager>(*static_cast<business_logic::Communication::CommunicationManager*>(argument));
-	const auto sendDataPeriod = 1000;
+
     size_t freeHeapSize = xPortGetFreeHeapSize();
     size_t minEverFreeHeapSize = xPortGetMinimumEverFreeHeapSize();
     const std::string startMsg = "SystemTasks::sendData started --> freeHeapSize: " + std::to_string(freeHeapSize) + " minEverFreeHeapSize " + std::to_string(minEverFreeHeapSize) + " stackSize: " + std::to_string(uxTaskGetStackHighWaterMark( NULL ));
@@ -279,14 +287,14 @@ void SystemTasks::sendData(void* argument)
 	{
 		RunTimeStats_Start(&startExecutionTime);
 
-		const auto pendingMsgs = isPendingData();
+		const auto pendingMsgs = getNextImage(nextSnapshot);
 
 		if(pendingMsgs)
 		{
 			const auto t1 = xTaskGetTickCount();
 			logMemoryUsage();
 
-			getNextImage(nextSnapshot);
+
 			const auto ptr = nextSnapshot->m_imgBuffer.get();
 			LOG_INFO("Sending image information to master node. PendingMSg: ", std::to_string(pendingMsgs));
 			//i++;
@@ -325,7 +333,10 @@ void SystemTasks::sendData(void* argument)
 					if( !warningMisingAck && confirmationTimeout > 500)
 					{
 						warningMisingAck = true;
-						LOG_WARNING("SystemTasks::sendData missing receivedConfirmation for: ", std::to_string(nextSnapshot->m_msgId), "--", std::to_string(msgIndex));
+						LOG_WARNING("SystemTasks::sendData missing receivedConfirmation for: ", std::to_string(nextSnapshot->m_msgId), "--", std::to_string(msgIndex), " -- size: ", std::to_string(canMsgChunks.size()));
+						auto& lastMsg = canMsgChunks.back();
+						LOG_WARNING(std::to_string(lastMsg.payloadSize), "--", std::to_string(lastMsg.payload[0])," ", std::to_string(lastMsg.payload[1]), " " ,std::to_string(lastMsg.payload[2]) ," " ,std::to_string(lastMsg.payload[3]) ,std::to_string(lastMsg.payload[4]) ," " ,std::to_string(lastMsg.payload[5]));
+
 						receivedConfirmation = true;
 					}
 					confirmationTimeout++;
@@ -335,12 +346,10 @@ void SystemTasks::sendData(void* argument)
 			}
 			const auto executionTime = (xTaskGetTickCount() - t1) * portTICK_PERIOD_MS;
 			logMemoryUsage();
-			RunTimeStats_End("sendData", startExecutionTime);
+			RunTimeStats_End("sendData", startExecutionTime, true);
 			LOG_INFO("SystemTasks::sendData executed in: ", std::to_string(executionTime), " ms");
 			transmisionOnGoing = false;
 		}
-
-		m_commTaskHandler->delay(sendDataPeriod);
 	}
 	/* USER CODE END 5 */
 }
@@ -378,7 +387,7 @@ void SystemTasks::syncronizationGlobalClock(void* argument)
 			if((i%10)  == 0){logMemoryUsage();i=0;}
 		}
 		i++;
-		RunTimeStats_End("syncronizationGlobalClock", startExecutionTime);
+		RunTimeStats_End("syncronizationGlobalClock", startExecutionTime, isTimeUpdated);
 		m_clockSyncTaskHandler->delay(syncClkPeriod);
 
 		if(triggerSystemStats > 10)
