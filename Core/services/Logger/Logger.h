@@ -59,6 +59,7 @@ public:
     bool isLevelEnabled(LogLevel level) const;
 
     void log(LogLevel level, const char* msg);
+    void unsafeLog(LogLevel level, const char* msg);
 
     template<typename... Args>
     void log(LogLevel logLevel, const Args&... args)

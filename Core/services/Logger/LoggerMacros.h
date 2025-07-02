@@ -15,6 +15,19 @@
 #define LOG_FATAL(...) LOG_IF_ENABLED(services::LogLevel::Critical, __VA_ARGS__)
 
 
+#define UNSAFELOG_IF_ENABLED(level, ...) \
+    do { \
+        if (services::Logger::Instance().isLevelEnabled(level)) \
+            services::Logger::Instance().unsafeLog(level, __VA_ARGS__); \
+    } while (0)
+
+#define UNSAFELOG_TRACE(...) UNSAFELOG_IF_ENABLED(services::LogLevel::Trace, __VA_ARGS__)
+#define UNSAFELOG_DEBUG(...) UNSAFELOG_IF_ENABLED(services::LogLevel::Debug, __VA_ARGS__)
+#define UNSAFELOG_INFO(...)  UNSAFELOG_IF_ENABLED(services::LogLevel::Info,  __VA_ARGS__)
+#define UNSAFELOG_WARNING(...) UNSAFELOG_IF_ENABLED(services::LogLevel::Warn, __VA_ARGS__)
+#define UNSAFELOG_ERROR(...) UNSAFELOG_IF_ENABLED(services::LogLevel::Error, __VA_ARGS__)
+#define UNSAFELOG_FATAL(...) UNSAFELOG_IF_ENABLED(services::LogLevel::Critical, __VA_ARGS__)
+
 static inline void printSystemStats()
 {
 	char statsBuffer[512];

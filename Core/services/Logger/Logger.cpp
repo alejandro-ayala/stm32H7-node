@@ -77,6 +77,24 @@ void Logger::log(LogLevel logLevel, const char* msg)
     xSemaphoreGive(uartMutex);
 }
 
+void Logger::unsafeLog(LogLevel level, const char* msg)
+{
+    static char logMsg[600];
+    const char* prefix = "";
+    switch (level)
+    {
+    case LogLevel::Trace:    prefix = "[TRACE] "; break;
+    case LogLevel::Debug:    prefix = "[DEBUG] "; break;
+    case LogLevel::Info:     prefix = "[INFO] "; break;
+    case LogLevel::Warn:     prefix = "[WARNING] "; break;
+    case LogLevel::Error:    prefix = "[ERROR] "; break;
+    case LogLevel::Critical: prefix = "[CRITICAL] "; break;
+    default: prefix = "[UNKNOWN] "; break;
+    }
+    std::snprintf(logMsg, sizeof(logMsg), "%s%s", prefix, msg);
+    outSink->send(logMsg, strlen(logMsg));
+}
+
 void Logger::setLogLevel(LogLevel logLevel)
 {
     m_logLevel = logLevel;
