@@ -1,4 +1,17 @@
 # Release Notes
+## Version 1.0.0 - 2025-06-13
+
+### New features
+- Componente para medición de tiempos de ejecución implementado usando periférico Timer.
+- Funcionalidad de estadísticas del sistema añadida.
+
+### Improvements
+- La tarea `SendData` cambia de usar `sleep` a una ejecución asíncrona, mejorando la eficiencia.
+- `SystemTasks::sendData` eliminó el `delayUntil`, ahora espera directamente la llegada de un nuevo `ImageSnapshot` en la cola de capturas.
+
+### Fixes
+- Corrección en `CanController::receiveMsg` para evitar retorno de frames CAN no inicializados cuando no se recibe mensaje.
+
 
 ## Version 0.1.0 - 2025-06-05
 
