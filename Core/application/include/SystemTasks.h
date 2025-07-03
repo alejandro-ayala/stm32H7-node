@@ -12,6 +12,7 @@
 #include <vector>
 #include "stm32h7xx_hal.h"
 
+extern volatile bool clockSynq;
 namespace application
 {
 typedef struct

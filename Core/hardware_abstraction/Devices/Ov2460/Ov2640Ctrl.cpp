@@ -43,10 +43,6 @@ void Ov2640Ctrl::initialization()
 	//CleanDCache_by_Addr((uint32_t*)m_frameBuffer, m_resolutionSize);
 	initializationDCMI();
 	m_i2cControl->initialize();
-	HAL_GPIO_WritePin(CAMERA_RESET_GPIO_Port, CAMERA_RESET_Pin, GPIO_PIN_RESET);
-	HAL_Delay(100);
-	HAL_GPIO_WritePin(CAMERA_RESET_GPIO_Port, CAMERA_RESET_Pin, GPIO_PIN_SET);
-	HAL_Delay(100);
 
 	//TODO add register map instead of magic values
 	m_i2cControl->send(0xff, 0x01);

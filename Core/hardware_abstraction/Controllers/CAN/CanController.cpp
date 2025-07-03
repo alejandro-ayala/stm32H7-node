@@ -101,7 +101,7 @@ int CanController::transmitMsg(uint8_t idMsg, const uint8_t *txMsg, uint8_t data
 	l_txHeader.DataLength = dataSize;//FDCAN_DLC_BYTES_64;
 	l_txHeader.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
 	l_txHeader.BitRateSwitch = FDCAN_BRS_OFF;
-	l_txHeader.FDFormat = FDCAN_FD_CAN;//FDCAN_CLASSIC_CAN;
+	l_txHeader.FDFormat = FDCAN_CLASSIC_CAN;//FDCAN_CLASSIC_CAN;
 	l_txHeader.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
 	l_txHeader.MessageMarker = 0x0;
 	//LOG_INFO("TAKE2");

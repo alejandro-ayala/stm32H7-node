@@ -469,12 +469,17 @@ void StartDefaultTask(void const * argument)
   }
   /* USER CODE END 5 */
 }
-
+volatile bool clockSynq = false;
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
+	static uint32_t cnt = 0;
+	if(globalClkMng && clockSynq)
+	{
 	const auto localTime   = globalClkMng->getLocalTimeReference();
-	const std::string logMsg = "HAL_GPIO_EXTI_Callback::syncronizationGlobalClock localTime: " + std::to_string(localTime) + " ms";
+	const std::string logMsg = "localTime(" + std::to_string(cnt) + "): " + std::to_string(localTime) + " ms";
 	UNSAFELOG_INFO(logMsg.c_str());
+	cnt++;
+	}
 }
 
 /**

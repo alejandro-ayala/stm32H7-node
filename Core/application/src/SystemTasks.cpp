@@ -26,6 +26,12 @@ static uint8_t currentRegisteredStats = 0;
 
 extern uint32_t ulGetRunTimeCounterValue(void);
 
+void toogleGpio()
+{
+	HAL_GPIO_WritePin(CAMERA_RESET_GPIO_Port, CAMERA_RESET_Pin, GPIO_PIN_SET);
+	HAL_Delay(1);
+	HAL_GPIO_WritePin(CAMERA_RESET_GPIO_Port, CAMERA_RESET_Pin, GPIO_PIN_RESET);
+}
 void RunTimeStats_Start(uint32_t *timestamp)
 {
     *timestamp = ulGetRunTimeCounterValue();
@@ -140,7 +146,6 @@ uint32_t ulGetRunTimeCounterValue(void)
 }
 
 volatile bool transmisionOnGoing = false;
-volatile bool clockSynq = false;
 
 SystemTasks::SystemTasks(const std::shared_ptr<business_logic::Communication::CommunicationManager>& commMng, const std::shared_ptr<business_logic::DataHandling::ImageCapturer>& imageCapturer, const std::shared_ptr<business_logic::ClockSyncronization::SharedClockSlaveManager>& sharedClkMng)
 {
@@ -161,6 +166,7 @@ SystemTasks::SystemTasks(const std::shared_ptr<business_logic::Communication::Co
 
 void SystemTasks::createPoolTasks(const std::shared_ptr<business_logic::Communication::CommunicationManager>& commMng, const std::shared_ptr<business_logic::DataHandling::ImageCapturer>& imageCapturer, const std::shared_ptr<business_logic::ClockSyncronization::SharedClockSlaveManager>& sharedClkMng)
 {
+	HAL_GPIO_WritePin(CAMERA_RESET_GPIO_Port, CAMERA_RESET_Pin, GPIO_PIN_RESET);
 	try {
 		m_clockSyncTaskHandler    = std::make_shared<business_logic::Osal::TaskHandler>(SystemTasks::syncronizationGlobalClock, "syncronizationGlobalClockTask", DefaultPriorityTask, static_cast<business_logic::Osal::VoidPtr>(sharedClkMng.get()), 2048);
 		m_dataHandlingTaskHandler = std::make_shared<business_logic::Osal::TaskHandler>(SystemTasks::edgeDetection, "edgeDetection", DefaultPriorityTask + 1, static_cast<business_logic::Osal::VoidPtr>(&m_taskParam), 4096);
@@ -378,6 +384,7 @@ void SystemTasks::syncronizationGlobalClock(void* argument)
 		const bool isTimeUpdated = sharedClkMng->synqGlobalTime();
 		if(isTimeUpdated)
 		{
+			toogleGpio();
 			const auto updatedTime = sharedClkMng->getTimeReference().toNs();
 			const auto localTime   = sharedClkMng->getLocalTimeReference();
 			const auto executionTime = (xTaskGetTickCount() - t1) * portTICK_PERIOD_MS;
