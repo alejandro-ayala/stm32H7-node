@@ -66,7 +66,7 @@ bool SharedClockSlaveManager::synqGlobalTime()
 
 			uint64_t currentGT = timeController->getLocalTime();
 			uint64_t newGT = (globalTimeStamp.seconds * 1e9) + globalTimeStamp.nanoseconds;
-			LOG_TRACE("SharedClockSlaveManager::setGlobalTimeReference newGT: ", newGT,  "currentGT: ",  currentGT);
+			LOG_INFO("SharedClockSlaveManager::setGlobalTimeReference newGT: ", std::to_string(newGT),  "currentGT: ",  std::to_string(currentGT));
 			timeController->setGlobalTimeReference(globalTimeStamp);
 			updatedTime = true;
 		}

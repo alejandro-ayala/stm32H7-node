@@ -385,10 +385,10 @@ void SystemTasks::syncronizationGlobalClock(void* argument)
 		if(isTimeUpdated)
 		{
 			toogleGpio();
-			const auto updatedTime = sharedClkMng->getTimeReference().toNs();
-			const auto localTime   = sharedClkMng->getLocalTimeReference();
+			const auto updatedTime = sharedClkMng->getTimeReference().toNs(); //globalTimeStamp actualizado en synqGlobalTime (con valores del nodo maestro)
+			//const auto localTime   = sharedClkMng->getLocalTimeReference();
 			const auto executionTime = (xTaskGetTickCount() - t1) * portTICK_PERIOD_MS;
-			const std::string logMsg = "SystemTasks::syncronizationGlobalClock Updated global master time to: " + std::to_string(updatedTime) + " previous(" + std::to_string(localTime) + "ms) executed in " + std::to_string(executionTime) + " ms";
+			const std::string logMsg = "SystemTasks::syncronizationGlobalClock Updated global master time to: " + std::to_string(updatedTime) + " ms";
 			LOG_INFO(logMsg);
 			clockSynq = true;
 			if((i%10)  == 0){logMemoryUsage();i=0;}
