@@ -4,6 +4,7 @@
 #include "../Communication/CanIDs.h"
 #include "CanSyncMessages.h"
 #include "services/Logger/LoggerMacros.h"
+#include <sstream>
 
 namespace business_logic
 {
@@ -96,5 +97,47 @@ uint64_t SharedClockSlaveManager::getLocalTimeReference() const
 {
 	return timeController->getLocalTime();
 }
+
+double SharedClockSlaveManager::getCurrentNs() const
+{
+	return timeController->getCurrentNsecTime();
+}
+
+void SharedClockSlaveManager::localClockTest() const
+{
+    const uint32_t testIntervals[] = {
+        1000,     // 1s
+        5000,     // 5s
+        10000,    // 10s
+        30000,    // 30s
+        60000,    // 1min
+        600000,   // 10min
+        900000,   // 15min
+    };
+    constexpr size_t numIntervals = sizeof(testIntervals) / sizeof(testIntervals[0]);
+    size_t currentIntervalIndex = 0;
+
+    while (true)
+    {
+        uint32_t currentInterval = testIntervals[currentIntervalIndex];
+
+        auto localTimeBefore = getLocalTimeReference();
+
+        vTaskDelay(pdMS_TO_TICKS(currentInterval));
+
+        auto localTimeAfter = getLocalTimeReference();
+
+        auto localTimeDiff = localTimeAfter - localTimeBefore;
+
+        std::ostringstream oss;
+        oss << "[ClockTest] Interval: " << currentInterval << " ms";
+        oss << "  localTimeDiff:   " << localTimeDiff << " ns";
+        std::string stringTimeDiff = oss.str();
+        LOG_INFO(stringTimeDiff);
+
+        currentIntervalIndex = (currentIntervalIndex + 1) % numIntervals;
+    }
+}
+
 }
 }

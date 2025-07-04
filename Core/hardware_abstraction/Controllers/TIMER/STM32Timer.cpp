@@ -65,16 +65,21 @@ uint64_t STM32Timer::getCurrentTicks() {
 }
 
 double STM32Timer::getCurrentSec() {
-	auto seconds = static_cast<double>(getCurrentTicks()) / configTICK_RATE_HZ;
+	auto currentTicks = getCurrentTicks();
+	double seconds = static_cast<double>(currentTicks) / 275e6;
 	return seconds;
 }
 
 double STM32Timer::getCurrentUsec() {
-	return (1e6 * getCurrentTicks()) / configTICK_RATE_HZ;
+	auto currentTicks = getCurrentTicks();
+	auto currentUs = static_cast<double>(currentTicks) * (1e6 / 275e6);
+	return currentUs;
 }
 
 double STM32Timer::getCurrentNsec() {
-	auto currentNs = (1e9 * getCurrentTicks()) / configTICK_RATE_HZ;
+	auto currentTicks = getCurrentTicks();
+	auto currentNs = static_cast<double>(currentTicks) * (1e9 / 275e6);
+
 	return currentNs;
 }
 

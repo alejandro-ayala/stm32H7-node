@@ -14,8 +14,8 @@ class SharedClockSlaveManager
 private:
 	std::shared_ptr<TimeController>                timeController;
 	std::shared_ptr<hardware_abstraction::Controllers::CanController>    canController;
-	TimeStamp                      globalTimeStamp;
-	TimeBaseRef                    globalTimeReference;
+	static inline TimeStamp                      globalTimeStamp;
+	static inline TimeBaseRef                    globalTimeReference;
 public:
 	SharedClockSlaveManager(std::shared_ptr<TimeController> timecontroller, std::shared_ptr<hardware_abstraction::Controllers::CanController> cancontroller);
 	~SharedClockSlaveManager();
@@ -23,6 +23,8 @@ public:
 	bool synqGlobalTime();
 	TimeStamp getTimeReference() const;
 	uint64_t getLocalTimeReference() const;
+	double getCurrentNs() const;
+	void localClockTest() const;
 };
 }
 }
