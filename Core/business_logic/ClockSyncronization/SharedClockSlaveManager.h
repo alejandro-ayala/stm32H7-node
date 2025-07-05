@@ -23,6 +23,7 @@ public:
 	bool synqGlobalTime();
 	TimeStamp getTimeReference() const;
 	uint64_t getLocalTimeReference() const;
+	double getGlobalTime() const;
 	double getCurrentNs() const;
 	void localClockTest() const;
 };

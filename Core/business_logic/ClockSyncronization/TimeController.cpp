@@ -26,6 +26,7 @@ TimeController::~TimeController()
 void TimeController::initialize()
 {
 	restartTimer();
+	clockOffset = 0;
 	selfTest();
 	initialized = true;
 }
@@ -44,16 +45,6 @@ void TimeController::restartTimer()
 {
 	internalTimer->restartTimer();
 }
-//void TimeController::setPeriod(uint32_t period)
-//{
-//	internalTimer->setPeriod(period);
-//}
-
-double TimeController::getCurrentSecTime()
-{
-	BUSINESS_LOGIC_ASSERT( internalTimer != nullptr, services::BusinessLogicErrorId::TimeControllerInitialization, "TimeController::getCurrentSecTime initialization error");
-	return internalTimer->getCurrentSec();
-}
 
 double TimeController::getCurrentNsecTime()
 {
@@ -66,41 +57,27 @@ uint64_t TimeController::getCurrentTicks()
 	BUSINESS_LOGIC_ASSERT( internalTimer != nullptr, services::BusinessLogicErrorId::TimeControllerInitialization, "TimeController::getCurrentTicks initialization error");
 	return internalTimer->getCurrentTicks();
 }
-//bool TimeController::elapsedTime()
-//{
-//	return internalTimer->elapsedTime();
-//}
-void TimeController::setGlobalTimeReference(const TimeStamp& gt)
+
+uint64_t TimeController::getElapsedTimeCounter() const
 {
-	globalTimeStamp = gt;
-	restartTimer();
+	return internalTimer->getElapsedTimeCounter();
 }
 
-TimeStamp TimeController::getGlobalTimeReference()
+uint64_t TimeController::getGlobalTime()
 {
-	return globalTimeStamp;
+    // Tiempo local del esclavo + el desfase calculado con el maestro
+    return getCurrentNsecTime() + clockOffset;
 }
 
-uint64_t TimeController::getLocalTime()
+void TimeController::setClockOffset(int64_t newOffset)
 {
-	uint64_t localNs = globalTimeStamp.toNs() + getCurrentNsecTime();
-	return localNs;
+	clockOffset = newOffset;
 }
 
 bool TimeController::selfTest()
 {
-	double t1,t2,t3 ;
-	internalTimer->restartTimer();
-	t1   = internalTimer->getCurrentSec();
-	HAL_Delay(1000);
-	t2   = internalTimer->getCurrentSec();
-	HAL_Delay(1000);
-	t3   = internalTimer->getCurrentSec();
-	if((((t2 - t1) < 0.9) || ((t2 - t1) > 1.1)) || (((t3 - t1) < 1.9) || ((t2 - t1) > 2.1)))
-	{
-		THROW_BUSINESS_LOGIC_EXCEPTION(services::BusinessLogicErrorId::TimeControllerInitialization, "TimeController::selfTest failed");
-	}
 	return true;
+
 }
 }
 }

@@ -43,12 +43,9 @@ bool SharedClockSlaveManager::synqGlobalTime()
 			globalTimeSynMsg.secCounter  = rxMsg.data[2];
 			globalTimeSynMsg.userByte    = rxMsg.data[3];
 			globalTimeSynMsg.syncTimeSec = rxMsg.data[4] << 24 | rxMsg.data[5] << 16 | rxMsg.data[6] << 8 | rxMsg.data[7];
-//			xil_printf(
-//					"SYNC -- type: %02x, crc: %02x, cnt: %02x, userByte: %02x, sec: %02x \n",
-//					globalTimeSynMsg.type, globalTimeSynMsg.crc,
-//					globalTimeSynMsg.secCounter, globalTimeSynMsg.userByte,
-//					globalTimeSynMsg.syncTimeSec);
+
 			globalTimeStamp.seconds = globalTimeSynMsg.syncTimeSec;
+			globalTimeStamp.t2vlt   = timeController->getCurrentNsecTime();
 			LOG_TRACE("globalTimeSynMsg --> type: ", globalTimeSynMsg.type, " CRC: ", globalTimeSynMsg.crc, " secCounter: ", globalTimeSynMsg.secCounter );
 			LOG_TRACE("globalTimeStamp.seconds: ", globalTimeStamp.seconds);
 			updatedTime = false;
@@ -62,14 +59,24 @@ bool SharedClockSlaveManager::synqGlobalTime()
 			globalTimeFupMsg.syncTimeNSec = rxMsg.data[4] << 24 | rxMsg.data[5] << 16 | rxMsg.data[6] << 8 | rxMsg.data[7];
 
 			globalTimeStamp.nanoseconds=globalTimeFupMsg.syncTimeNSec;
-			LOG_TRACE("globalTimeFupMsg --> type: ", globalTimeFupMsg.type, " CRC: ", globalTimeFupMsg.crc, " secCounter: ", globalTimeFupMsg.secCounter );
-			LOG_TRACE("globalTimeStamp.nanoseconds: ", globalTimeStamp.nanoseconds);
+			globalTimeStamp.t5vlt   = timeController->getGlobalTime();
 
-			uint64_t currentGT = timeController->getLocalTime();
-			uint64_t newGT = (globalTimeStamp.seconds * 1e9) + globalTimeStamp.nanoseconds;
-			LOG_INFO("SharedClockSlaveManager::setGlobalTimeReference newGT: ", std::to_string(newGT),  "currentGT: ",  std::to_string(currentGT));
-			timeController->setGlobalTimeReference(globalTimeStamp);
+/****************************/
+			// 1. Reconstruir el tiempo de envío exacto del maestro.
+			uint64_t masterSendTime = (globalTimeStamp.seconds * 1e9) + globalTimeStamp.nanoseconds;
+
+			// 2. Obtener el tiempo de recepción local del esclavo (guardado al recibir el SYNC).
+			uint64_t slaveReceptionTime = globalTimeStamp.t2vlt;
+
+			// 3. Calcular el desfase. Esta es la fórmula clave.
+			//    Offset = (Tiempo del Maestro cuando envió) - (Tiempo del Esclavo cuando recibió)
+			int64_t newOffset = masterSendTime - slaveReceptionTime;
+			std::string strOffset = "Clock offset = (masterSendTime - slaveReceptionTime): " + std::to_string(newOffset) + " = " + std::to_string(masterSendTime) + " - " + std::to_string(slaveReceptionTime);
+			LOG_INFO(strOffset);
+			timeController->setClockOffset(newOffset);
 			updatedTime = true;
+/****************************/
+
 		}
 		else
 		{
@@ -88,19 +95,9 @@ bool SharedClockSlaveManager::synqGlobalTime()
 	return updatedTime;
 }
 
-TimeStamp SharedClockSlaveManager::getTimeReference() const
+double SharedClockSlaveManager::getGlobalTime() const
 {
-	return globalTimeStamp;
-}
-
-uint64_t SharedClockSlaveManager::getLocalTimeReference() const
-{
-	return timeController->getLocalTime();
-}
-
-double SharedClockSlaveManager::getCurrentNs() const
-{
-	return timeController->getCurrentNsecTime();
+	return timeController->getGlobalTime();
 }
 
 void SharedClockSlaveManager::localClockTest() const
@@ -116,7 +113,9 @@ void SharedClockSlaveManager::localClockTest() const
     };
     constexpr size_t numIntervals = sizeof(testIntervals) / sizeof(testIntervals[0]);
     size_t currentIntervalIndex = 0;
-
+    std::ostringstream oss;
+    oss << "********** [SharedClockSlaveManager::localClockTest] ********** ";
+    oss << "  InitialAbsoluteTime:   "     << getLocalTimeReference() << " ns";
     while (true)
     {
         uint32_t currentInterval = testIntervals[currentIntervalIndex];
@@ -128,12 +127,14 @@ void SharedClockSlaveManager::localClockTest() const
         auto localTimeAfter = getLocalTimeReference();
 
         auto localTimeDiff = localTimeAfter - localTimeBefore;
+        auto elapsedTimeCnt = timeController->getElapsedTimeCounter();
 
         std::ostringstream oss;
-        oss << "[ClockTest] Interval: " << currentInterval << " ms";
-        oss << "  localTimeDiff:   " << localTimeDiff << " ns";
-        std::string stringTimeDiff = oss.str();
-        LOG_INFO(stringTimeDiff);
+        oss << "  SleepTask: "        << (currentInterval*1e6) << " ns";
+        oss << "  elapsedTimeCnt: "   << elapsedTimeCnt;
+        oss << "  localTime: "        << localTimeAfter << " ns";
+        oss << "  localTimeDiff: "    << localTimeDiff << " ns";
+        LOG_INFO(oss.str());
 
         currentIntervalIndex = (currentIntervalIndex + 1) % numIntervals;
     }

@@ -215,7 +215,7 @@ void SystemTasks::edgeDetection(void* argument)
 			if(isValidImg)
 			{
 				logMemoryUsage();
-				const auto captureTimestamp = sharedClkMng->getLocalTimeReference();
+				const auto captureTimestamp = sharedClkMng->getGlobalTime();
 
 				std::shared_ptr<business_logic::DataSerializer::ImageSnapshot> imageSnapshot;
 				static uint8_t captureId = 0;
@@ -364,7 +364,7 @@ void SystemTasks::syncronizationGlobalClock(void* argument)
 {
 	auto sharedClkMng = std::make_shared<business_logic::ClockSyncronization::SharedClockSlaveManager>(*static_cast<business_logic::ClockSyncronization::SharedClockSlaveManager*>(argument));
 	sharedClkMng->initialization();
-
+	//sharedClkMng->localClockTest();
 	const auto syncClkPeriod = 1000;
     size_t freeHeapSize = xPortGetFreeHeapSize();
     size_t minEverFreeHeapSize = xPortGetMinimumEverFreeHeapSize();
@@ -385,7 +385,7 @@ void SystemTasks::syncronizationGlobalClock(void* argument)
 		if(isTimeUpdated)
 		{
 			toogleGpio();
-			const auto updatedTime = sharedClkMng->getTimeReference().toNs(); //globalTimeStamp actualizado en synqGlobalTime (con valores del nodo maestro)
+			const auto updatedTime = sharedClkMng->getGlobalTime(); //globalTimeStamp actualizado en synqGlobalTime (con valores del nodo maestro)
 			//const auto localTime   = sharedClkMng->getLocalTimeReference();
 			const auto executionTime = (xTaskGetTickCount() - t1) * portTICK_PERIOD_MS;
 			const std::string logMsg = "SystemTasks::syncronizationGlobalClock Updated global master time to: " + std::to_string(updatedTime) + " ms";

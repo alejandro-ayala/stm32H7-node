@@ -15,6 +15,7 @@ class TimeController : public hardware_abstraction::Controllers::IController
 private:
 	hardware_abstraction::Controllers::ITimer* internalTimer;
 	TimeStamp globalTimeStamp;
+	int64_t clockOffset;
 public:
 	TimeController();
 	~TimeController();
@@ -26,6 +27,7 @@ public:
 	void startTimer();
 	void stopTimer();
 	void restartTimer();
+	void setClockOffset(int64_t newOffset);
 	void setPeriod(uint32_t period);
 	double getCurrentSecTime();
 	double getCurrentNsecTime();
@@ -33,6 +35,8 @@ public:
 	void setGlobalTimeReference(const TimeStamp& gt);
 	TimeStamp getGlobalTimeReference();
 	uint64_t getLocalTime();
+	uint64_t getElapsedTimeCounter() const;
+	uint64_t getGlobalTime();
 };
 }
 }

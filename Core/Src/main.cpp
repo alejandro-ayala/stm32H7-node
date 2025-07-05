@@ -475,10 +475,14 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 	static uint32_t cnt = 0;
 	if(globalClkMng && clockSynq)
 	{
-	const auto localTime   = globalClkMng->getLocalTimeReference();
-	const std::string logMsg = "localTime(" + std::to_string(cnt) + "): " + std::to_string(localTime) + " ms";
-	UNSAFELOG_INFO(logMsg.c_str());
-	cnt++;
+		const auto globalTime     = globalClkMng->getGlobalTime();
+
+		std::ostringstream oss;
+		oss << "********** [HAL_GPIO_EXTI_Callback] ********** ";
+		oss << "  GlobalTime( "     << cnt << "): ";
+    	oss << std::fixed << std::setprecision(0) << globalTime << " ns";
+		UNSAFELOG_INFO(oss.str().c_str());
+		cnt++;
 	}
 }
 

@@ -23,10 +23,16 @@ typedef struct
 	uint16_t secondsHi;
 	uint64_t tx_stamp;
 	uint64_t t_0_c;
+	uint64_t t5vlt;
+	uint64_t t2vlt;
 
 	uint64_t toNs()
 	{
 		return (seconds * 1e9) + nanoseconds;
+	}
+	uint64_t toNsCorrected()
+	{
+		return (seconds * 1e9) + nanoseconds + (t5vlt - t2vlt);
 	}
 } TimeStamp;
 
