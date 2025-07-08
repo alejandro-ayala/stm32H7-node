@@ -16,9 +16,8 @@ FrameIndex = int
 DataPayload = bytes
 MessageKey = Tuple[ImageID, CborID]
 updateGlobalClkPeriod = 3
-channel = 'PCAN_USBBUS1'  # Asegúrate de cambiar esto si tu bus es diferente
-output_file = 'image.jpeg'  # Nombre del archivo donde almacenar los mensajes
-# Configurar la conexión con la PCAN-USB a 125 kbit/s usando 'interface'
+channel = 'PCAN_USBBUS1'
+output_file = 'image.jpeg' 
 bus = can.interface.Bus(interface='pcan', channel=channel, bitrate=250000)
 
 class ImageSnapshot:
@@ -54,10 +53,9 @@ class ImageSnapshot:
             print(f"timestamp: {self.timestamp}")
 
             if self.img_buffer:
-                # Mostrar algunos bytes del buffer de imagen para verificar
                 print(f"imgBuffer (primeros 10 bytes): {self.img_buffer[:10]}")
         else:
-            print("No se ha deserializado la secuencia de bytes todavía.")
+            print("No se ha deserializado la secuencia de bytes")
             
 class CANMessage:
     """Clase para representar un mensaje CAN."""
@@ -65,7 +63,6 @@ class CANMessage:
         self.message_id = message_id  # ID del mensaje CAN
         self.data = data  # Datos del mensaje CAN (8 bytes)
 
-        # Parsing de los bytes según la especificación
         self.image_id = (self.data[0] >> 6) & 0b11  # Bits 7 y 6
         self.cbor_id = self.data[0] & 0b00111111  # Bits 5 a 0
         self.frame_index = self.data[1]  # Byte[1]
@@ -154,11 +151,9 @@ def reconstruct_and_view_jpeg(output_directory, final_image_filename="FullJpegIm
 
     print(f"Imagen reconstruida guardada en: {final_image_fullpath}")
 
-    # Mostrar la imagen con PIL
     img = Image.open(final_image_fullpath)
     img.show()
 
-    # Mostrar la imagen con OpenCV
     img_cv2 = cv2.imread(final_image_fullpath)
     cv2.imshow("Imagen Completa", img_cv2)
     cv2.waitKey(0)
@@ -177,24 +172,12 @@ def read_can_messages():
             while True:
                 message = bus.recv(timeout=1)  # Leer mensajes con timeout de 1 segundo
                 if message:
-                    # Convertir los datos del mensaje a una cadena de bytes hexadecimales separados por espacios
                     data_hex = ' '.join(f"{byte:02x}" for byte in message.data)
-                    # Imprimir mensaje en la consola
                     print(f"Message received: ID: {message.arbitration_id}, Data: {data_hex}, DLC: {message.dlc}", flush=True)
                     
-                    # Procesar el mensaje y agregarlo al ensamblador
                     assembler.add_message(CANMessage(message.arbitration_id, message.data))
 
-                    # Almacenar el mensaje en el archivo
                     #file.write(f"{data_hex}\n")
-
-                # Revisar si tenemos tramas CBOR completas (opcional, puedes definir cuándo es el momento adecuado)
-                #ordered_tramas = assembler.get_all_ordered_tramas()
-                #for key, tramas in ordered_tramas.items():
-                #    image_id, cbor_id = key
-                #    print(f"\nImagen ID: {image_id}, Cbor ID: {cbor_id}")
-                #    for idx, trama in enumerate(tramas):
-                #        print(f"  Trama {idx}: {trama.hex()}")
 
         except KeyboardInterrupt:
             print("Stopped listening for CAN messages.")
@@ -205,13 +188,10 @@ def read_can_messages():
                 concatenated_tramas = ''.join(trama.hex() for trama in tramas)
                 #print(f"  Tramas concatenadas: {concatenated_tramas}")
                 
-                # Crear instancia de ImageSnapshot
                 snapshot = ImageSnapshot(bytes.fromhex(concatenated_tramas))
 
-                # Deserializar la secuencia de bytes
                 snapshot.deserialize()
 
-                # Imprimir los campos
                 #snapshot.print_fields()
                 
                 output_directory = 'Resources/memory_dump'
@@ -230,7 +210,6 @@ def read_can_messages():
                 with open(cbor_frame_fullpath_filename, 'w') as file:
                     file.write(cbor_frame)
 
-                #guardar la imagen
                 jpeg_frame = ' '.join(f"{byte:02X}" for byte in snapshot.img_buffer)
                 jpeg_frame_filename = "JpegFrame" + str(cbor_id) + ".txt"
                 jpeg_frame_fullpath_filename = os.path.join(output_directory, jpeg_frame_filename)  
@@ -270,10 +249,10 @@ def send_periodic_messages():
         try:
             bus.send(syncMessage)
             #print("syncMessage")
-            time.sleep(0.1)  # Pequeño retraso entre mensajes consecutivos
+            time.sleep(0.1)
             bus.send(followUpMessage)
             #print("followUpMessage")
-            time.sleep(updateGlobalClkPeriod)  # Tiempo entre envíos periódicos (ajústalo según sea necesario)
+            time.sleep(updateGlobalClkPeriod)
         except can.CanError as e:
             print(f"Error enviando mensaje: {e}")
             
